@@ -11,6 +11,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -45,7 +46,12 @@ public class SecurityConfig {
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-			.csrf(cs -> cs.disable())
+			.csrf(cs -> cs.ignoringRequestMatchers(
+				new AntPathRequestMatcher("/api/auth/**"),
+				new AntPathRequestMatcher("/internal/auth/**"),
+				new AntPathRequestMatcher("/auth/exchange", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/auth/logout", HttpMethod.POST.name())
+			))
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 			.exceptionHandling(e -> e.authenticationEntryPoint(entryPoint).accessDeniedHandler(denied))
 			.authorizeHttpRequests(auth -> auth
