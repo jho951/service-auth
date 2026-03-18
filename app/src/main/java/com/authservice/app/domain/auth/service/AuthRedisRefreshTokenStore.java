@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
 
-	private static final String KEY_PREFIX = "auth:refresh:";
+	private static final String KEY_PREFIX = "auth:refresh-token:";
 
 	private final RedisTemplate<String, Object> redisTemplate;
 	private final Map<String, Instant> fallbackStore = new ConcurrentHashMap<>();

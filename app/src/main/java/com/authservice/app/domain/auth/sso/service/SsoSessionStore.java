@@ -14,9 +14,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class SsoSessionStore {
 
-	private static final String STATE_PREFIX = "sso:state:";
-	private static final String TICKET_PREFIX = "sso:ticket:";
-	private static final String SESSION_PREFIX = "sso:session:";
+	private static final String STATE_PREFIX = "auth:oauth-state:";
+	private static final String TICKET_PREFIX = "auth:ticket:";
+	private static final String SESSION_PREFIX = "auth:session:";
 
 	private final RedisTemplate<String, Object> redisTemplate;
 	private final Map<String, ExpiringValue> fallbackStore = new ConcurrentHashMap<>();

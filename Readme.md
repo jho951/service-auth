@@ -38,6 +38,37 @@
 ./docker/shutdown.sh dev all
 ```
 
+## Redis Endpoint Examples
+
+이 서비스는 중앙 Redis endpoint를 환경변수로 받아 연결합니다.
+
+### 로컬에서 auth-service만 실행
+
+```bash
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export REDIS_PASSWORD=your-redis-password
+export REDIS_SSL=false
+```
+
+### 같은 Docker host에서 별도 Redis compose 사용
+
+```bash
+export REDIS_HOST=central-redis
+export REDIS_PORT=6379
+export REDIS_PASSWORD=your-redis-password
+export REDIS_SSL=false
+```
+
+### 운영 환경에서 private DNS 사용
+
+```bash
+export REDIS_HOST=redis.internal.company
+export REDIS_PORT=6379
+export REDIS_PASSWORD=your-redis-password
+export REDIS_SSL=false
+```
+
 ## Notes
 
 - 서비스 책임 분리와 `user-service` 설계안은 [docs/auth-user-service-design.md](./docs/auth-user-service-design.md) 문서를 참고하면 됩니다.

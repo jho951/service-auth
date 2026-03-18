@@ -14,7 +14,7 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_SSL: ${REDIS_SSL:-false}
     command: ["--spring.profiles.active=${SPRING_PROFILES_ACTIVE}"]
@@ -24,17 +24,17 @@ services:
       mysql:
         condition: service_healthy
     networks:
-      - external
+      - app-internal
 
   mysql:
     env_file:
       - ${ENV_FILE_PATH}
     networks:
-      - external
+      - app-internal
 
 volumes:
   mysql-volume:
 
 networks:
-  external:
+  app-internal:
     driver: bridge
