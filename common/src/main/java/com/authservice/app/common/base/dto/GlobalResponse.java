@@ -2,8 +2,6 @@ package com.authservice.app.common.base.dto;
 
 import lombok.Getter;
 
-import org.springframework.http.HttpStatus;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import com.authservice.app.common.base.constant.ErrorCode;
@@ -14,10 +12,10 @@ import com.authservice.app.common.base.constant.SuccessCode;
 public final class GlobalResponse<T> {
 
 	@Schema(description = "HTTP 상태 코드", example = "200")
-	private final HttpStatus httpStatus;
+	private final int httpStatus;
 
 	@Schema(description = "성공 여부", example = "true")
-	private final Boolean isSuccess;
+	private final boolean success;
 
 	@Schema(description = "응답 메시지", example = "요청이 성공적으로 처리되었습니다.")
 	private final String message;
@@ -28,12 +26,12 @@ public final class GlobalResponse<T> {
 	@Schema(description = "응답 데이터")
 	private final T data;
 
-	public GlobalResponse(HttpStatus httpStatus, Boolean isSuccess, String message, int code, T data) {
-		if (httpStatus == null || message == null) {
-			throw new IllegalArgumentException("HTTP 상태와 메시지는 null일 수 없습니다.");
+	public GlobalResponse(int httpStatus, boolean success, String message, int code, T data) {
+		if (message == null) {
+			throw new IllegalArgumentException("메시지는 null일 수 없습니다.");
 		}
 		this.httpStatus = httpStatus;
-		this.isSuccess = isSuccess;
+		this.success = success;
 		this.message = message;
 		this.code = code;
 		this.data = data;
@@ -45,7 +43,7 @@ public final class GlobalResponse<T> {
 		}
 		return new GlobalResponse<>(
 			successCode.getHttpStatus(),
-			successCode.getIsSuccess(),
+			successCode.isSuccess(),
 			successCode.getMessage(),
 			successCode.getCode(),
 			data
@@ -55,7 +53,7 @@ public final class GlobalResponse<T> {
 	public static GlobalResponse<Void> ok() {
 		return new GlobalResponse<>(
 			SuccessCode.SUCCESS.getHttpStatus(),
-			SuccessCode.SUCCESS.getIsSuccess(),
+			SuccessCode.SUCCESS.isSuccess(),
 			SuccessCode.SUCCESS.getMessage(),
 			SuccessCode.SUCCESS.getCode(),
 			null
@@ -68,7 +66,7 @@ public final class GlobalResponse<T> {
 		}
 		return new GlobalResponse<>(
 			errorCode.getHttpStatus(),
-			errorCode.getIsSuccess(),
+			errorCode.isSuccess(),
 			errorCode.getMessage(),
 			errorCode.getCode(),
 			null

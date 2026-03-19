@@ -2,8 +2,11 @@
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 
--- DB 생성
-CREATE DATABASE IF NOT EXISTS dev;
+-- app 계정 및 DB 생성
+CREATE DATABASE IF NOT EXISTS auth_db;
+CREATE USER IF NOT EXISTS 'auth_user'@'%' IDENTIFIED BY 'auth_password';
+GRANT ALL PRIVILEGES ON auth_db.* TO 'auth_user'@'%';
+FLUSH PRIVILEGES;
 
 -- 생성된 DB 사용
-USE dev;
+USE auth_db;

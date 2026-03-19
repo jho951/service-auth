@@ -23,8 +23,8 @@ spring:
       client:
         registration:
           github:
-            client-id: ${SSO_GITHUB_CLIENT_ID:}
-            client-secret: ${SSO_GITHUB_CLIENT_SECRET:}
+            client-id: local-dev-github-client-id
+            client-secret: local-dev-github-client-secret
             scope:
               - read:user
               - user:email

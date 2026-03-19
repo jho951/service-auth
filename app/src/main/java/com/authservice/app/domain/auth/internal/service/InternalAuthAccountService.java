@@ -6,6 +6,7 @@ import com.authservice.app.domain.auth.entity.Auth;
 import com.authservice.app.domain.auth.internal.dto.InternalAuthRequest;
 import com.authservice.app.domain.auth.internal.dto.InternalAuthResponse;
 import com.authservice.app.domain.auth.repository.AuthRepository;
+import com.authservice.app.domain.auth.service.AuthAuditService;
 import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InternalAuthAccountService {
 
 	private final AuthRepository authRepository;
+	private final AuthAuditService authAuditService;
 	private final PasswordEncoder passwordEncoder;
 
 	@Transactional
@@ -30,9 +32,12 @@ public class InternalAuthAccountService {
 
 			Auth auth = authRepository.save(Auth.builder()
 				.userId(request.getUserId())
-				.username(request.getEmail())
+				.loginId(request.getEmail())
+				.email(request.getEmail())
 				.passwordHash(passwordEncoder.encode(request.getPassword()))
 				.build());
+
+			authAuditService.log("ACCOUNT_CREATED", "SUCCESS", auth, null, "{\"source\":\"internal-signup\"}");
 
 			return InternalAuthResponse.AccountResponse.from(auth.getId(), auth.getUserId(), auth.getUsername());
 		} catch (DataIntegrityViolationException e) {
@@ -46,6 +51,7 @@ public class InternalAuthAccountService {
 	public void deleteAccount(java.util.UUID userId) {
 		Auth auth = authRepository.findByUserId(userId)
 			.orElseThrow(() -> new GlobalException(ErrorCode.NOT_FOUND_AUTH_ACCOUNT));
+		authAuditService.log("ACCOUNT_DELETED", "SUCCESS", auth, null, "{\"source\":\"internal-signup-rollback\"}");
 		authRepository.delete(auth);
 	}
 }

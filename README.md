@@ -1,7 +1,5 @@
 # Auth-server
 
-> *인증/인가 서버* 입니다.
-> 
 > MSA에서 독립 배포되는 `auth-service`이며, *로그인, 토큰 발급/재발급, 로그아웃, 인증 필터 연동*을 담당합니다.
 
 ## Architecture
@@ -36,6 +34,11 @@
 ```bash
 ./docker/shutdown.sh dev app
 ./docker/shutdown.sh dev all
+```
+
+### dev app 초기화 후 재기동
+```bash
+./docker/reset-dev-app.sh
 ```
 
 ## Redis Endpoint Examples
@@ -73,7 +76,7 @@ export REDIS_SSL=false
 
 - 서비스 책임 분리와 `user-service` 설계안은 [docs/auth-user-service-design.md](./docs/auth-user-service-design.md) 문서를 참고하면 됩니다.
 - 현재 Gradle 루트는 멀티모듈 집계 프로젝트이며, `app`과 `common` 모듈로 구성됩니다.
-- Docker 환경 값의 단일 소스는 `gradle.properties`이고, `docker/*.sh`가 실행 시 `.generated/.env.*`를 생성합니다.
+- Docker 환경 값의 단일 소스는 루트 `.env.dev`/`.env.prod`이고, `docker/*.sh`가 실행 시 `docker/.generated/.env.*` 스냅샷을 생성합니다.
 - Redis는 이 레포에서 별도 컨테이너로 띄우지 않으며, 중앙 Redis endpoint를 환경변수로 주입받아 사용합니다.
 - 의존성 및 플러그인 버전은 `gradle/libs.versions.toml`에서 중앙 관리합니다.
 - SSO 시작 API는 `page=explain|editor|admin` 또는 각 페이지의 등록된 `redirect_uri`를 기준으로 동작합니다.

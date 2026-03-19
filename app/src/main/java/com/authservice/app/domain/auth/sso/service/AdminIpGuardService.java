@@ -6,7 +6,6 @@ import com.authservice.app.domain.auth.sso.config.SsoProperties;
 import com.ipguard.core.engine.IpGuardEngine;
 import com.ipguard.spi.RuleSource;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

@@ -5,6 +5,7 @@ import com.authservice.app.domain.auth.sso.model.GithubUserProfile;
 import com.authservice.app.domain.auth.sso.model.SsoPrincipal;
 import com.authservice.app.common.base.constant.ErrorCode;
 import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.app.domain.auth.service.AuthSocialAccountService;
 import com.authservice.app.domain.auth.userdirectory.model.OAuth2ProvisionCommand;
 import com.authservice.app.domain.auth.userdirectory.model.UserAccountProfile;
 import com.authservice.app.domain.auth.userdirectory.service.UserDirectory;
@@ -15,9 +16,11 @@ import org.springframework.stereotype.Service;
 public class SsoUserService {
 
 	private final UserDirectory userDirectory;
+	private final AuthSocialAccountService authSocialAccountService;
 
-	public SsoUserService(UserDirectory userDirectory) {
+	public SsoUserService(UserDirectory userDirectory, AuthSocialAccountService authSocialAccountService) {
 		this.userDirectory = userDirectory;
+		this.authSocialAccountService = authSocialAccountService;
 	}
 
 	public SsoPrincipal verifyGithubUser(GithubUserProfile profile) {
@@ -61,6 +64,8 @@ public class SsoUserService {
 		if (!"ACTIVE".equalsIgnoreCase(user.status())) {
 			throw new GlobalException(ErrorCode.FORBIDDEN);
 		}
+
+		authSocialAccountService.upsert("github", profile.getProviderId(), user.userId(), profile.getEmail());
 
 		return new SsoPrincipal(
 			user.userId().toString(),

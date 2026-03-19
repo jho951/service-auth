@@ -11,20 +11,22 @@ services:
       DB_DRIVER: com.mysql.cj.jdbc.Driver
       MYSQL_URL: jdbc:mysql://mysql:3306/${MYSQL_DB}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
       MYSQL_HOST: mysql
-      MYSQL_USER: root
-      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_SSL: ${REDIS_SSL:-false}
+      SERVER_PORT: ${SERVER_PORT:-8081}
     command: ["--spring.profiles.active=${SPRING_PROFILES_ACTIVE}"]
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT:-8081}:${SERVER_PORT:-8081}"
     depends_on:
       mysql:
         condition: service_healthy
     networks:
       - app-internal
+      - redis-core
 
   mysql:
     env_file:
@@ -38,3 +40,6 @@ volumes:
 networks:
   app-internal:
     driver: bridge
+  redis-core:
+    external: true
+    name: ${REDIS_NETWORK_NAME:-redis-core}

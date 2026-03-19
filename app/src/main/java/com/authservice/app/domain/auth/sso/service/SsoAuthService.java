@@ -11,6 +11,8 @@ import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoTicketPaylo
 import com.authservice.app.domain.auth.sso.model.SsoTargetPage;
 import com.authservice.app.common.base.constant.ErrorCode;
 import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.app.domain.auth.service.AuthAuditService;
+import com.authservice.app.domain.auth.service.AuthRequestContext;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;
@@ -32,6 +34,7 @@ public class SsoAuthService {
 	private final SsoUserService ssoUserService;
 	private final SsoCookieService cookieService;
 	private final AdminIpGuardService adminIpGuardService;
+	private final AuthAuditService authAuditService;
 
 	public SsoAuthService(
 		SsoProperties properties,
@@ -39,7 +42,8 @@ public class SsoAuthService {
 		SsoSessionStore sessionStore,
 		SsoUserService ssoUserService,
 		SsoCookieService cookieService,
-		AdminIpGuardService adminIpGuardService
+		AdminIpGuardService adminIpGuardService,
+		AuthAuditService authAuditService
 	) {
 		this.properties = properties;
 		this.authProperties = authProperties;
@@ -47,6 +51,7 @@ public class SsoAuthService {
 		this.ssoUserService = ssoUserService;
 		this.cookieService = cookieService;
 		this.adminIpGuardService = adminIpGuardService;
+		this.authAuditService = authAuditService;
 	}
 
 	public org.springframework.http.ResponseEntity<Void> startGithubLogin(String page, String redirectUri, HttpServletRequest request) {
@@ -75,6 +80,18 @@ public class SsoAuthService {
 			.build();
 	}
 
+	public org.springframework.http.ResponseEntity<Void> startOAuthLogin(
+		String provider,
+		String page,
+		String redirectUri,
+		HttpServletRequest request
+	) {
+		if (!"github".equalsIgnoreCase(provider)) {
+			throw new GlobalException(ErrorCode.INVALID_REQUEST);
+		}
+		return startGithubLogin(page, redirectUri, request);
+	}
+
 	public org.springframework.http.ResponseEntity<Void> exchangeTicket(String ticket, HttpServletRequest request) {
 		SsoTicketPayload payload = sessionStore.consumeTicket(ticket)
 			.orElseThrow(() -> new GlobalException(ErrorCode.UNAUTHORIZED));
@@ -97,8 +114,31 @@ public class SsoAuthService {
 			),
 			expiresAt
 		);
+		authAuditService.log("SSO_LOGIN_SUCCESS", "SUCCESS", UUID.fromString(payload.getUserId()), AuthRequestContext.from(request), null);
 
 		return cookieService.writeSessionCookie(sessionId);
+	}
+
+	public org.springframework.http.ResponseEntity<com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse> validateInternalSession(
+		HttpServletRequest request
+	) {
+		String sessionId = cookieService.extractSessionId(request).orElse(null);
+		if (sessionId == null || sessionId.isBlank()) {
+			return org.springframework.http.ResponseEntity.status(401)
+				.body(new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(false, "", "", ""));
+		}
+
+		return sessionStore.findSession(sessionId)
+			.map(payload -> org.springframework.http.ResponseEntity.ok(
+				new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(
+					true,
+					payload.getUserId(),
+					resolvePrimaryRole(payload),
+					sessionId
+				)
+			))
+			.orElseGet(() -> org.springframework.http.ResponseEntity.status(401)
+				.body(new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(false, "", "", "")));
 	}
 
 	public URI completeOAuthLogin(SsoPrincipal principal, HttpServletRequest request) {
@@ -119,6 +159,7 @@ public class SsoAuthService {
 			),
 			expiresAt
 		);
+		authAuditService.log("SSO_TICKET_ISSUED", "SUCCESS", UUID.fromString(principal.getUserId()), AuthRequestContext.from(request), null);
 
 		return URI.create(UriComponentsBuilder.fromUriString(statePayload.getRedirectUri())
 			.queryParam("ticket", ticket)
@@ -160,7 +201,12 @@ public class SsoAuthService {
 	}
 
 	public org.springframework.http.ResponseEntity<Void> logout(HttpServletRequest request) {
-		cookieService.extractSessionId(request).ifPresent(sessionStore::revokeSession);
+		cookieService.extractSessionId(request).ifPresent(sessionId -> {
+			sessionStore.findSession(sessionId).ifPresent(payload ->
+				authAuditService.log("SSO_LOGOUT", "SUCCESS", UUID.fromString(payload.getUserId()), AuthRequestContext.from(request), null)
+			);
+			sessionStore.revokeSession(sessionId);
+		});
 		return cookieService.clearSessionCookie();
 	}
 
@@ -231,5 +277,13 @@ public class SsoAuthService {
 			.path(path)
 			.build()
 			.toUriString();
+	}
+
+	private String resolvePrimaryRole(SsoSessionPayload payload) {
+		if (payload.getRoles() == null || payload.getRoles().isEmpty()) {
+			return "";
+		}
+		String role = payload.getRoles().get(0);
+		return role == null ? "" : role;
 	}
 }

@@ -4,11 +4,11 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-GRADLE_PROPERTIES_FILE="$PROJECT_ROOT/gradle.properties"
 GENERATED_ENV_DIR="$SCRIPT_DIR/.generated"
 ENV=${1:-dev}
 TARGET=${2:-all}
-ENV_FILE="$GENERATED_ENV_DIR/.env.$ENV"
+SOURCE_ENV_FILE="$PROJECT_ROOT/.env.$ENV"
+GENERATED_ENV_FILE="$GENERATED_ENV_DIR/.env.$ENV"
 
 APP_COMPOSE_FILES=(
   "$SCRIPT_DIR/docker-compose.app.yml"
@@ -29,39 +29,25 @@ esac
 [[ -n "${ES_COMPOSE:-}" ]] && COMPOSE_FILES+=("$ES_COMPOSE")
 
 generate_env_file() {
-  local prefix="env.${ENV}."
   mkdir -p "$GENERATED_ENV_DIR"
 
-  if [[ ! -f "$GRADLE_PROPERTIES_FILE" ]]; then
-    echo "❌ gradle.properties not found: $GRADLE_PROPERTIES_FILE"
+  if [[ ! -f "$SOURCE_ENV_FILE" ]]; then
+    echo "❌ Source ENV file not found: $SOURCE_ENV_FILE"
     exit 1
   fi
 
-  awk -v prefix="$prefix" '
-    index($0, prefix) == 1 {
-      line = substr($0, length(prefix) + 1)
-      eq = index(line, "=")
-      if (eq == 0) {
-        next
-      }
-      key = substr(line, 1, eq - 1)
-      value = substr(line, eq + 1)
-      print key "=" value
-    }
-  ' "$GRADLE_PROPERTIES_FILE" > "$ENV_FILE"
+  cp "$SOURCE_ENV_FILE" "$GENERATED_ENV_FILE"
 
-  if [[ ! -s "$ENV_FILE" ]]; then
-    echo "❌ No environment entries found for prefix: $prefix"
+  if [[ ! -s "$GENERATED_ENV_FILE" ]]; then
+    echo "❌ Generated ENV file is empty: $GENERATED_ENV_FILE"
     exit 1
   fi
-
-  printf 'ENV_FILE_PATH=%s\n' "$ENV_FILE" >> "$ENV_FILE"
 }
 
 generate_env_file
 
-if [[ ! -f "$ENV_FILE" ]]; then
-  echo "❌ Generated ENV file not found: $ENV_FILE"
+if [[ ! -f "$SOURCE_ENV_FILE" ]]; then
+  echo "❌ Source ENV file not found: $SOURCE_ENV_FILE"
   exit 1
 fi
 
@@ -83,11 +69,12 @@ fi
 
 echo "🛑 Stopping and removing Docker Compose services..."
 echo "📄 Target: $TARGET"
-echo "📄 Using ENV file: $ENV_FILE"
+echo "📄 Using source ENV file: $SOURCE_ENV_FILE"
+echo "📄 Generated ENV snapshot: $GENERATED_ENV_FILE"
 echo "📄 Using Docker Compose files:"
 for f in "${COMPOSE_FILES[@]}"; do echo "  $f"; done
 
-docker compose --env-file "$ENV_FILE" \
+docker compose --env-file "$SOURCE_ENV_FILE" \
   $(for f in "${COMPOSE_FILES[@]}"; do echo "-f $f"; done) \
   down --remove-orphans -v
 

@@ -4,6 +4,36 @@ import java.util.List;
 
 public class SsoResponse {
 
+	public static class InternalSessionValidationResponse {
+		private final boolean authenticated;
+		private final String userId;
+		private final String role;
+		private final String sessionId;
+
+		public InternalSessionValidationResponse(boolean authenticated, String userId, String role, String sessionId) {
+			this.authenticated = authenticated;
+			this.userId = userId;
+			this.role = role;
+			this.sessionId = sessionId;
+		}
+
+		public boolean isAuthenticated() {
+			return authenticated;
+		}
+
+		public String getUserId() {
+			return userId;
+		}
+
+		public String getRole() {
+			return role;
+		}
+
+		public String getSessionId() {
+			return sessionId;
+		}
+	}
+
 	public static class MeResponse {
 		private final String id;
 		private final String email;

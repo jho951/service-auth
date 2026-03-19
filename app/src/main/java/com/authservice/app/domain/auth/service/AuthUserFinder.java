@@ -21,12 +21,13 @@ public class AuthUserFinder implements UserFinder {
 
 	@Override
 	public Optional<User> findByUsername(String username) {
-		return authRepository.findByUsername(username)
+		return authRepository.findByLoginId(username)
+			.filter(auth -> !auth.isAccountLocked())
 			.flatMap(auth -> userDirectory.findByUserId(auth.getUserId())
 				.filter(user -> "ACTIVE".equalsIgnoreCase(user.status()))
 				.map(user -> new User(
 					String.valueOf(user.userId()),
-					auth.getUsername(),
+					auth.getLoginId(),
 					auth.getPasswordHash(),
 					List.of(user.role())
 				)));

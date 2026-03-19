@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,9 +34,24 @@ public class SsoController {
 		return ssoAuthService.startGithubLogin(page, redirectUri, request);
 	}
 
+	@GetMapping("/oauth2/authorize/{provider}")
+	public ResponseEntity<Void> authorize(
+		@PathVariable String provider,
+		@RequestParam(name = "page", required = false) String page,
+		@RequestParam(name = "redirect_uri", required = false) String redirectUri,
+		HttpServletRequest request
+	) {
+		return ssoAuthService.startOAuthLogin(provider, page, redirectUri, request);
+	}
+
 	@PostMapping("/exchange")
 	public ResponseEntity<Void> exchange(@Valid @RequestBody SsoRequest.ExchangeRequest request, HttpServletRequest servletRequest) {
 		return ssoAuthService.exchangeTicket(request.getTicket(), servletRequest);
+	}
+
+	@PostMapping("/internal/session/validate")
+	public ResponseEntity<SsoResponse.InternalSessionValidationResponse> validateSession(HttpServletRequest request) {
+		return ssoAuthService.validateInternalSession(request);
 	}
 
 	@GetMapping("/me")

@@ -1,0 +1,11 @@
+server:
+  port: ${SERVER_PORT:8081}
+  forward-headers-strategy: framework
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  error:
+    whitelabel:
+      enabled: false

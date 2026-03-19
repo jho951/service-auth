@@ -9,5 +9,9 @@ import com.authservice.app.domain.auth.entity.Auth;
 
 public interface AuthRepository extends JpaRepository<Auth, UUID> {
 	Optional<Auth> findByUserId(UUID userId);
-	Optional<Auth> findByUsername(String username);
+	Optional<Auth> findByLoginId(String loginId);
+
+	default Optional<Auth> findByUsername(String username) {
+		return findByLoginId(username);
+	}
 }
