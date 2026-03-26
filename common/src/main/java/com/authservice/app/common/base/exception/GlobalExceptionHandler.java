@@ -1,6 +1,7 @@
 package com.authservice.app.common.base.exception;
 
 import com.auth.api.exception.AuthException;
+import com.auth.api.exception.AuthFailureReason;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,10 +33,10 @@ public class GlobalExceptionHandler {
 	}
 
 	private ErrorCode mapAuthError(AuthException ex) {
-		return switch (ex.getErrorCode()) {
+		return switch (ex.getReason()) {
 			case INVALID_CREDENTIALS, USER_NOT_FOUND -> ErrorCode.UNAUTHORIZED;
-			case INVALID_TOKEN, TOKEN_EXPIRED, TOKEN_REVOKED, BLANK_ACCESS_TOKEN, BLANK_REFRESH_TOKEN -> ErrorCode.INVALID_TOKEN;
-			case INVALID_REQUEST, BLANK_USER_ID, BLANK_PASSWORD -> ErrorCode.INVALID_REQUEST;
+			case INVALID_TOKEN, REVOKED_TOKEN -> ErrorCode.INVALID_TOKEN;
+			case INVALID_INPUT -> ErrorCode.INVALID_REQUEST;
 			default -> ErrorCode.FAIL;
 		};
 	}

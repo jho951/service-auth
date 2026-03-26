@@ -1,6 +1,6 @@
 # Auth-server
 
-> MSA에서 독립 배포되는 `auth-service`이며, *로그인, 토큰 발급/재발급, 로그아웃, 인증 필터 연동*을 담당합니다.
+> MSA에서 독립 배포되는 `auth-service`입니다.
 
 ## Architecture
 
@@ -91,6 +91,7 @@ export REDIS_SSL=false
 ## Notes
 
 - 서비스 책임 분리와 `user-service` 설계안은 [docs/auth-user-service-design.md](./docs/auth-user-service-design.md) 문서를 참고하면 됩니다.
+- 현재 구조에서 `auth-service` 는 인증 컨텍스트를 만들고, `user-service` 는 사용자 마스터 데이터를 소유합니다. SSO 로그인 완료 시 `auth-service` 는 `USER_SERVICE_BASE_URL` 을 통해 `user-service` 를 호출합니다.
 - DB 스키마와 환경별 생성 정책은 [docs/database.md](./docs/database.md) 문서를 참고하면 됩니다.
 - 현재 Gradle 루트는 멀티모듈 집계 프로젝트이며, `app`과 `common` 모듈로 구성됩니다.
 - Docker 환경 값의 단일 소스는 루트 `.env.dev`/`.env.prod`입니다.
@@ -98,6 +99,7 @@ export REDIS_SSL=false
 - 의존성 및 플러그인 버전은 `gradle/libs.versions.toml`에서 중앙 관리합니다.
 - SSO 시작 API는 `page=explain|editor|admin` 또는 각 페이지의 등록된 `redirect_uri`를 기준으로 동작합니다.
 - GitHub OAuth 적용은 `io.github.jho951 auth` `1.1.4`의 OAuth2 모델/SPI와 Spring Security OAuth2 Client를 사용하고, 성공 후에는 기존과 동일하게 일회용 `ticket`을 발급해 `/auth/exchange`로 세션을 만듭니다.
+- GitHub OAuth callback URI는 gateway 기준 `/login/oauth2/code/github` 와 일치해야 합니다. 예시 dev 값은 `http://localhost:8080/login/oauth2/code/github` 입니다.
 - `admin` 페이지는 `ip-guard` 화이트리스트를 통과해야만 SSO 시작/교환/세션확인이 허용됩니다.
 - 로컬 개발(`dev`)에서는 `admin` SSO의 IP guard를 기본 비활성화합니다. 운영에서는 계속 활성화됩니다.
 - 로컬에서 IP guard를 수동 활성화해야 한다면 `127.0.0.1`, `::1`, `192.168.65.1`, `172.17.0.1`, `172.16.0.0/12` 같은 Docker host gateway/bridge 대역을 허용 목록에 포함해야 합니다.

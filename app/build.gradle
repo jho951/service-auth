@@ -23,12 +23,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation libs.springdoc.openapi
-    implementation libs.auth.contract
     implementation libs.auth.core
-    implementation libs.auth.spi
-    implementation libs.auth.starter
-    implementation libs.auth.common
+    implementation libs.auth.spring
+    implementation libs.auth.jwt.starter
+    implementation libs.auth.hybrid.starter
     implementation libs.ip.guard.starter
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
     testImplementation libs.junit.jupiter
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

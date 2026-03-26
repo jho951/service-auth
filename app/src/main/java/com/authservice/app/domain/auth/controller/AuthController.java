@@ -3,7 +3,6 @@ package com.authservice.app.domain.auth.controller;
 import com.authservice.app.domain.auth.entity.Auth;
 
 import com.auth.api.model.Tokens;
-import com.auth.config.dto.LoginResponse;
 import com.auth.core.service.AuthService;
 import com.auth.config.controller.RefreshCookieWriter;
 import com.auth.config.controller.RefreshTokenExtractor;
@@ -60,8 +59,9 @@ public class AuthController {
 
 	/**
 	 * 사용자 자격 증명(ID/PW)을 확인하여 로그인을 수행합니다.
-	 * <p> 성공 시 액세스 토큰과 리프레시 토큰을 발급하며, 실패 시 실패 횟수를 기록하고 예외를 던집니다. </p>
-	 *
+	 * <p>
+	 * 성공 시 액세스 토큰과 리프레시 토큰을 발급하며, 실패 시 실패 횟수를 기록하고 예외를 던집니다.
+	 * </p>
 	 * @param req     사용자 아이디와 비밀번호를 담은 요청 객체
 	 * @param request 클라이언트 정보를 추출하기 위한 HttpServletRequest
 	 * @return ResponseEntity 발급된 토큰 정보를 포함
@@ -75,9 +75,9 @@ public class AuthController {
 			Optional<Auth> auth = authAccountPolicyService.markLoginSuccess(req.getUsername());
 			authLoginAttemptService.record(req.getUsername(), context, "SUCCESS");
 
-			ResponseEntity<LoginResponse> response = refreshCookieWriter.write(
+			ResponseEntity<Void> response = refreshCookieWriter.write(
 				tokens,
-				ResponseEntity.ok(new LoginResponse(tokens.getAccessToken()))
+				ResponseEntity.ok().build()
 			);
 
 			return ResponseEntity.status(response.getStatusCode())
@@ -102,9 +102,9 @@ public class AuthController {
 		String refreshToken = refreshTokenExtractor.extract(request);
 		Tokens tokens = authService.refresh(refreshToken);
 
-		ResponseEntity<LoginResponse> response = refreshCookieWriter.write(
+		ResponseEntity<Void> response = refreshCookieWriter.write(
 			tokens,
-			ResponseEntity.ok(new LoginResponse(tokens.getAccessToken()))
+			ResponseEntity.ok().build()
 		);
 
 		return ResponseEntity.status(response.getStatusCode())

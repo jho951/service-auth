@@ -21,7 +21,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation libs.springdoc.openapi
     implementation libs.jackson.databind
-    implementation libs.auth.contract
+    implementation libs.auth.core
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

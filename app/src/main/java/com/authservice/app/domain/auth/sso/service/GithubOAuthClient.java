@@ -31,6 +31,10 @@ public class GithubOAuthClient {
 
 	public GithubUserProfile fetchUserProfile(String code) {
 		String accessToken = exchangeCode(code);
+		return fetchUserProfileByAccessToken(accessToken);
+	}
+
+	public GithubUserProfile fetchUserProfileByAccessToken(String accessToken) {
 		GithubUserResponse user = restClient.get()
 			.uri(properties.getGithub().getUserUri())
 			.header("Accept", MediaType.APPLICATION_JSON_VALUE)
@@ -39,7 +43,7 @@ public class GithubOAuthClient {
 			.body(GithubUserResponse.class);
 
 		if (user == null || user.id() == null) {
-			log.warn("GitHub user lookup failed: user payload missing. code={}", code);
+			log.warn("GitHub user lookup failed: user payload missing");
 			throw new GlobalException(ErrorCode.INVALID_REQUEST);
 		}
 

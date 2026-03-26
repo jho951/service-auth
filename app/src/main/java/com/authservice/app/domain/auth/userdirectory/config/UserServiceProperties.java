@@ -13,4 +13,16 @@ public class UserServiceProperties {
 
 	private String baseUrl;
 	private String internalApiKey;
+	private Jwt jwt = new Jwt();
+
+	@Getter
+	@Setter
+	public static class Jwt {
+		private String issuer;
+		private String audience;
+		private String subject;
+		private String scope;
+		private long ttlSeconds = 60;
+		private String secret;
+	}
 }

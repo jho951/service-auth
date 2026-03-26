@@ -9,7 +9,7 @@ auth:
   refresh-cookie-same-site: Lax
   auto-security: false
   oauth2:
-    enabled: true
+    enabled: false
     authorization-base-uri: /oauth2/authorization
     login-processing-base-uri: /login/oauth2/code/*
   jwt:
@@ -25,6 +25,7 @@ spring:
           github:
             client-id: ${SSO_GITHUB_CLIENT_ID:}
             client-secret: ${SSO_GITHUB_CLIENT_SECRET:}
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             scope:
               - read:user
               - user:email

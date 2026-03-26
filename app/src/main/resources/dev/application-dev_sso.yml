@@ -4,7 +4,7 @@ sso:
   github:
     client-id: ${SSO_GITHUB_CLIENT_ID:}
     client-secret: ${SSO_GITHUB_CLIENT_SECRET:}
-    callback-uri: ${SSO_GITHUB_CALLBACK_URI:http://localhost:8080/auth/github/callback}
+    callback-uri: ${SSO_GITHUB_CALLBACK_URI:http://localhost:8080/login/oauth2/code/github}
   frontend:
     explain:
       origin: ${SSO_EXPLAIN_ORIGIN:http://localhost:3000}

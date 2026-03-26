@@ -3,7 +3,6 @@ package com.authservice.app.domain.auth.controller;
 import com.auth.api.model.Tokens;
 import com.auth.config.controller.RefreshCookieWriter;
 import com.auth.config.controller.RefreshTokenExtractor;
-import com.auth.config.dto.LoginResponse;
 import com.auth.core.service.AuthService;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
@@ -71,9 +70,9 @@ public class AuthGatewayController {
 			Optional<Auth> auth = authAccountPolicyService.markLoginSuccess(req.getUsername());
 			authLoginAttemptService.record(req.getUsername(), context, "SUCCESS");
 
-			ResponseEntity<LoginResponse> response = refreshCookieWriter.write(
+			ResponseEntity<Void> response = refreshCookieWriter.write(
 				tokens,
-				ResponseEntity.ok(new LoginResponse(tokens.getAccessToken()))
+				ResponseEntity.ok().build()
 			);
 			return ResponseEntity.status(response.getStatusCode())
 				.headers(response.getHeaders())
@@ -96,9 +95,9 @@ public class AuthGatewayController {
 		String refreshToken = refreshTokenExtractor.extract(request);
 		Tokens tokens = authService.refresh(refreshToken);
 
-		ResponseEntity<LoginResponse> response = refreshCookieWriter.write(
+		ResponseEntity<Void> response = refreshCookieWriter.write(
 			tokens,
-			ResponseEntity.ok(new LoginResponse(tokens.getAccessToken()))
+			ResponseEntity.ok().build()
 		);
 		return ResponseEntity.status(response.getStatusCode())
 			.headers(response.getHeaders())

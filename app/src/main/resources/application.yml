@@ -4,6 +4,7 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      - com.ipguard.config.IpGuardAutoConfiguration
 
   config:
     import:
@@ -26,3 +27,10 @@ internal:
 user-service:
   base-url: ${USER_SERVICE_BASE_URL:}
   internal-api-key: ${USER_SERVICE_INTERNAL_API_KEY:${INTERNAL_API_KEY:local-internal-api-key}}
+  jwt:
+    issuer: ${USER_SERVICE_JWT_ISSUER:auth-service}
+    audience: ${USER_SERVICE_JWT_AUDIENCE:user-service}
+    subject: ${USER_SERVICE_JWT_SUBJECT:auth-service}
+    scope: ${USER_SERVICE_JWT_SCOPE:internal}
+    ttl-seconds: ${USER_SERVICE_JWT_TTL_SECONDS:60}
+    secret: ${USER_SERVICE_JWT_SECRET:${AUTH_JWT_SECRET:${JWT_ACCESS_TOKEN_SECRET:}}}
