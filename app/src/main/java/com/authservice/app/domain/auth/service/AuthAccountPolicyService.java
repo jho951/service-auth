@@ -12,9 +12,11 @@ public class AuthAccountPolicyService {
 	private static final int MAX_FAILED_LOGIN_COUNT = 5;
 
 	private final AuthRepository authRepository;
+	private final AuthUserCacheStore authUserCacheStore;
 
-	public AuthAccountPolicyService(AuthRepository authRepository) {
+	public AuthAccountPolicyService(AuthRepository authRepository, AuthUserCacheStore authUserCacheStore) {
 		this.authRepository = authRepository;
+		this.authUserCacheStore = authUserCacheStore;
 	}
 
 	@Transactional
@@ -22,7 +24,9 @@ public class AuthAccountPolicyService {
 		return authRepository.findByLoginId(loginId)
 			.map(auth -> {
 				auth.markLoginSuccess();
-				return authRepository.save(auth);
+				Auth saved = authRepository.save(auth);
+				authUserCacheStore.evict(loginId);
+				return saved;
 			});
 	}
 
@@ -34,7 +38,9 @@ public class AuthAccountPolicyService {
 				if (auth.getFailedLoginCount() >= MAX_FAILED_LOGIN_COUNT) {
 					auth.lockAccount();
 				}
-				return authRepository.save(auth);
+				Auth saved = authRepository.save(auth);
+				authUserCacheStore.evict(loginId);
+				return saved;
 			});
 	}
 }

@@ -20,7 +20,7 @@ public class SwaggerConfig {
 		return new OpenAPI()
 			.info(new Info()
 				.title("BackEnd API")
-				.version("v1")
+				.version("1.0")
 				.description("API Documentation for Spring Boot App"))
 			.addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
 			.components(new Components()
@@ -39,7 +39,7 @@ public class SwaggerConfig {
 	public GroupedOpenApi publicApi() {
 		return GroupedOpenApi.builder()
 			.group("Public APIs")
-			.pathsToMatch("/api/v1/**")
+			.pathsToMatch("/api/**")
 			.build();
 	}
 

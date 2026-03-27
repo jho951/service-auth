@@ -1,5 +1,6 @@
 auth:
   endpoints-enabled: false
+  user-cache-ttl-seconds: ${AUTH_USER_CACHE_TTL_SECONDS:300}
   bearer-prefix: "Bearer "
   refresh-cookie-enabled: true
   refresh-cookie-name: ${AUTH_REFRESH_COOKIE_NAME:${JWT_COOKIE_NAME:refresh_token}}

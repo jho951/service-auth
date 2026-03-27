@@ -47,7 +47,6 @@ public class SecurityConfig {
 		http
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 			.csrf(cs -> cs.ignoringRequestMatchers(
-				new AntPathRequestMatcher("/api/auth/**"),
 				new AntPathRequestMatcher("/internal/auth/**"),
 				new AntPathRequestMatcher("/auth/exchange", HttpMethod.POST.name()),
 				new AntPathRequestMatcher("/auth/logout", HttpMethod.POST.name())
@@ -56,7 +55,6 @@ public class SecurityConfig {
 			.exceptionHandling(e -> e.authenticationEntryPoint(entryPoint).accessDeniedHandler(denied))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(
-					"/api/auth/**",
 					"/internal/auth/**",
 					"/auth/**",
 					"/oauth2/**",

@@ -15,8 +15,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
@@ -25,8 +23,6 @@ import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
 
 /** 인증 및 인가 처리 담당 컨트롤러입니다. */
-@RestController
-@RequestMapping("/api/auth")
 public class AuthController {
 
 	private final AuthService authService;
