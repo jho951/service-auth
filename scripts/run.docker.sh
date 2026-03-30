@@ -9,6 +9,7 @@ ACTION=${1:-up}
 ENV=${2:-dev}
 TARGET=${3:-all}
 SOURCE_ENV_FILE="$PROJECT_ROOT/.env.$ENV"
+MSA_SHARED_NETWORK="${MSA_SHARED_NETWORK:-msa-shared}"
 
 APP_COMPOSE_FILES=(
   "$DOCKER_DIR/docker-compose.app.yml"
@@ -43,6 +44,8 @@ if [[ ! -f "$SOURCE_ENV_FILE" ]]; then
   exit 1
 fi
 
+docker network inspect "$MSA_SHARED_NETWORK" >/dev/null 2>&1 || docker network create "$MSA_SHARED_NETWORK" >/dev/null
+
 missing_files=()
 for f in "${COMPOSE_FILES[@]}"; do
   if [[ -z "${f:-}" ]]; then
@@ -76,9 +79,9 @@ for f in "${COMPOSE_FILES[@]}"; do
 done
 
 if [[ "$ACTION" == "up" ]]; then
-  ENV_FILE_PATH="$SOURCE_ENV_FILE" docker compose --env-file "$SOURCE_ENV_FILE" \
+  ENV_FILE_PATH="$SOURCE_ENV_FILE" MSA_SHARED_NETWORK="$MSA_SHARED_NETWORK" docker compose --env-file "$SOURCE_ENV_FILE" \
     "${COMPOSE_ARGS[@]}" up --build -d
 else
-  ENV_FILE_PATH="$SOURCE_ENV_FILE" docker compose --env-file "$SOURCE_ENV_FILE" \
+  ENV_FILE_PATH="$SOURCE_ENV_FILE" MSA_SHARED_NETWORK="$MSA_SHARED_NETWORK" docker compose --env-file "$SOURCE_ENV_FILE" \
     "${COMPOSE_ARGS[@]}" down --remove-orphans -v
 fi

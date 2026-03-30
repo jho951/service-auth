@@ -1,3 +1,5 @@
+name: auth-service
+
 services:
   auth-service:
     container_name: auth-service
@@ -26,6 +28,7 @@ services:
         condition: service_healthy
     networks:
       - app-internal
+      - msa-shared
       - redis-core
 
   auth-mysql:
@@ -40,6 +43,9 @@ volumes:
 networks:
   app-internal:
     driver: bridge
+  msa-shared:
+    external: true
+    name: ${MSA_SHARED_NETWORK:-msa-shared}
   redis-core:
     external: true
     name: ${REDIS_NETWORK_NAME:-redis-core}
