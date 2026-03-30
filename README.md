@@ -2,6 +2,12 @@
 
 > MSA에서 독립 배포되는 `auth-service`입니다.
 
+## Contract Source
+
+- 공통 계약 레포: `https://github.com/jho951/contract`
+- 이 서비스의 코드 SoT: `Auth-server` `main`
+- 인터페이스 변경 시 본 저장소 구현보다 계약 레포 변경을 먼저 반영합니다.
+
 ## Architecture
 
 - `auth-service`
@@ -27,6 +33,13 @@
 
 ```bash
 ./scripts/run.docker.sh
+```
+
+`./scripts/run.docker.sh`는 `.env.dev`/`.env.prod`가 없어도 로컬 기본값으로 실행됩니다.
+운영처럼 강제 검증이 필요하면 `--strict` 옵션을 사용합니다.
+
+```bash
+./scripts/run.docker.sh up dev app --strict
 ```
 
 ### 스택별 실행
