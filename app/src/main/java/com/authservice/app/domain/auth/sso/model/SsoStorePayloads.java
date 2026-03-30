@@ -38,6 +38,7 @@ public class SsoStorePayloads {
 		private String name;
 		private String avatarUrl;
 		private List<String> roles;
+		private String status;
 		private String pageType;
 		private Instant expiresAt;
 
@@ -50,6 +51,7 @@ public class SsoStorePayloads {
 			String name,
 			String avatarUrl,
 			List<String> roles,
+			String status,
 			String pageType,
 			Instant expiresAt
 		) {
@@ -58,6 +60,7 @@ public class SsoStorePayloads {
 			this.name = name;
 			this.avatarUrl = avatarUrl;
 			this.roles = roles;
+			this.status = status;
 			this.pageType = pageType;
 			this.expiresAt = expiresAt;
 		}
@@ -82,6 +85,10 @@ public class SsoStorePayloads {
 			return roles;
 		}
 
+		public String getStatus() {
+			return status;
+		}
+
 		public String getPageType() {
 			return pageType;
 		}
@@ -97,17 +104,19 @@ public class SsoStorePayloads {
 		private String name;
 		private String avatarUrl;
 		private List<String> roles;
+		private String status;
 		private Instant expiresAt;
 
 		public SsoSessionPayload() {
 		}
 
-		public SsoSessionPayload(String userId, String email, String name, String avatarUrl, List<String> roles, Instant expiresAt) {
+		public SsoSessionPayload(String userId, String email, String name, String avatarUrl, List<String> roles, String status, Instant expiresAt) {
 			this.userId = userId;
 			this.email = email;
 			this.name = name;
 			this.avatarUrl = avatarUrl;
 			this.roles = roles;
+			this.status = status;
 			this.expiresAt = expiresAt;
 		}
 
@@ -129,6 +138,10 @@ public class SsoStorePayloads {
 
 		public List<String> getRoles() {
 			return roles;
+		}
+
+		public String getStatus() {
+			return status;
 		}
 
 		public Instant getExpiresAt() {

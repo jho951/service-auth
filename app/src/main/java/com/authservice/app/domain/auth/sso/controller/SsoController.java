@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 @RequestMapping("/auth")
@@ -34,6 +35,15 @@ public class SsoController {
 		return ssoAuthService.startGithubLogin(page, redirectUri, request);
 	}
 
+	@GetMapping("/login/github")
+	public ResponseEntity<Void> loginGithub(
+		@RequestParam(name = "page", required = false) String page,
+		@RequestParam(name = "redirect_uri", required = false) String redirectUri,
+		HttpServletRequest request
+	) {
+		return ssoAuthService.startGithubLogin(page, redirectUri, request);
+	}
+
 	@GetMapping("/oauth2/authorize/{provider}")
 	public ResponseEntity<Void> authorize(
 		@PathVariable String provider,
@@ -44,6 +54,16 @@ public class SsoController {
 		return ssoAuthService.startOAuthLogin(provider, page, redirectUri, request);
 	}
 
+	@GetMapping("/oauth/github/callback")
+	public ResponseEntity<Void> oauthGithubCallback(HttpServletRequest request) {
+		String query = request.getQueryString();
+		String location = UriComponentsBuilder.fromPath("/login/oauth2/code/github")
+			.query(query)
+			.build(true)
+			.toUriString();
+		return ResponseEntity.status(302).header("Location", location).build();
+	}
+
 	@PostMapping("/exchange")
 	public ResponseEntity<Void> exchange(@Valid @RequestBody SsoRequest.ExchangeRequest request, HttpServletRequest servletRequest) {
 		return ssoAuthService.exchangeTicket(request.getTicket(), servletRequest);
@@ -51,6 +71,11 @@ public class SsoController {
 
 	@PostMapping("/internal/session/validate")
 	public ResponseEntity<SsoResponse.InternalSessionValidationResponse> validateSession(HttpServletRequest request) {
+		return ssoAuthService.validateInternalSession(request);
+	}
+
+	@GetMapping("/session")
+	public ResponseEntity<SsoResponse.InternalSessionValidationResponse> session(HttpServletRequest request) {
 		return ssoAuthService.validateInternalSession(request);
 	}
 
@@ -65,7 +90,8 @@ public class SsoController {
 			principal.getEmail(),
 			principal.getName(),
 			principal.getAvatarUrl(),
-			principal.getRoles()
+			principal.getRoles(),
+			principal.getStatus()
 		);
 	}
 

@@ -9,13 +9,15 @@ public class SsoPrincipal {
 	private final String name;
 	private final String avatarUrl;
 	private final List<String> roles;
+	private final String status;
 
-	public SsoPrincipal(String userId, String email, String name, String avatarUrl, List<String> roles) {
+	public SsoPrincipal(String userId, String email, String name, String avatarUrl, List<String> roles, String status) {
 		this.userId = userId;
 		this.email = email;
 		this.name = name;
 		this.avatarUrl = avatarUrl;
 		this.roles = roles;
+		this.status = status;
 	}
 
 	public String getUserId() {
@@ -36,5 +38,9 @@ public class SsoPrincipal {
 
 	public List<String> getRoles() {
 		return roles;
+	}
+
+	public String getStatus() {
+		return status;
 	}
 }

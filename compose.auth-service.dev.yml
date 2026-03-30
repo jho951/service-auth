@@ -1,0 +1,55 @@
+name: auth-service
+
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - .env.dev
+    command: ["--spring.profiles.active=dev"]
+    ports:
+      - "8081:8081"
+    depends_on:
+      auth-mysql:
+        condition: service_healthy
+    networks:
+      - service-shared
+      - auth-private
+      - redis-core
+
+  auth-mysql:
+    image: mysql:8.0
+    env_file:
+      - .env.dev
+    volumes:
+      - auth-mysql-volume:/var/lib/mysql
+      - type: bind
+        source: ./docker/services/mysql/dev/my.cnf
+        target: /etc/mysql/my.cnf
+      - type: bind
+        source: ./docker/services/mysql/dev/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h "$$MYSQL_HOST" -u "$$MYSQL_USER" -p"$$MYSQL_PASSWORD"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-private
+
+volumes:
+  auth-mysql-volume:
+
+networks:
+  service-shared:
+    external: true
+    name: msa-service-shared
+  auth-private:
+    driver: bridge
+    internal: true
+  redis-core:
+    external: true
+    name: redis-core

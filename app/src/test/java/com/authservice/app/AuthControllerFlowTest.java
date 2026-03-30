@@ -11,11 +11,11 @@ import static org.mockito.Mockito.when;
 import com.auth.api.model.Tokens;
 import com.auth.config.controller.RefreshCookieWriter;
 import com.auth.config.controller.RefreshTokenExtractor;
-import com.auth.config.dto.LoginResponse;
 import com.auth.core.service.AuthService;
 import com.authservice.app.domain.auth.controller.AuthController;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
+import com.authservice.app.domain.auth.sso.service.SsoCookieService;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
 import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 
@@ -46,6 +45,9 @@ class AuthControllerFlowTest {
 	@Mock
 	private AuthLoginAttemptService authLoginAttemptService;
 
+	@Mock
+	private SsoCookieService ssoCookieService;
+
 	private AuthController authController;
 
 	@BeforeEach
@@ -55,7 +57,8 @@ class AuthControllerFlowTest {
 			refreshTokenExtractor,
 			refreshCookieWriter,
 			authAccountPolicyService,
-			authLoginAttemptService
+			authLoginAttemptService,
+			ssoCookieService
 		);
 	}
 
@@ -66,9 +69,10 @@ class AuthControllerFlowTest {
 		Tokens tokens = mock(Tokens.class);
 		when(tokens.getAccessToken()).thenReturn("access-token");
 		when(tokens.getRefreshToken()).thenReturn("refresh-token");
+		when(ssoCookieService.buildAccessTokenCookie("access-token")).thenReturn("access=access-token");
 		when(authService.login(request.getUsername(), request.getPassword())).thenReturn(tokens);
 		when(refreshCookieWriter.write(any(Tokens.class), any(ResponseEntity.class)))
-			.thenReturn(ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, "refresh=refresh-token").body(new LoginResponse("access-token")));
+			.thenReturn(ResponseEntity.ok().build());
 
 		ResponseEntity<AuthResponse.TokenResponse> response = authController.login(request, servletRequest);
 
@@ -100,10 +104,11 @@ class AuthControllerFlowTest {
 		Tokens refreshed = mock(Tokens.class);
 		when(refreshed.getAccessToken()).thenReturn("new-access-token");
 		when(refreshed.getRefreshToken()).thenReturn("new-refresh-token");
+		when(ssoCookieService.buildAccessTokenCookie("new-access-token")).thenReturn("access=new-access-token");
 		when(refreshTokenExtractor.extract(servletRequest)).thenReturn("old-refresh-token");
 		when(authService.refresh("old-refresh-token")).thenReturn(refreshed);
 		when(refreshCookieWriter.write(any(Tokens.class), any(ResponseEntity.class)))
-			.thenReturn(ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, "refresh=new-refresh-token").body(new LoginResponse("new-access-token")));
+			.thenReturn(ResponseEntity.ok().build());
 
 		ResponseEntity<AuthResponse.TokenResponse> response = authController.refresh(servletRequest);
 
@@ -118,6 +123,7 @@ class AuthControllerFlowTest {
 	void logoutRevokesRefreshTokenAndClearsCookie() {
 		HttpServletRequest servletRequest = new MockHttpServletRequest();
 		when(refreshTokenExtractor.extract(servletRequest)).thenReturn("refresh-token");
+		when(ssoCookieService.clearAccessTokenCookie()).thenReturn("access=; Max-Age=0");
 		when(refreshCookieWriter.clear(any(ResponseEntity.class))).thenReturn(ResponseEntity.noContent().build());
 
 		ResponseEntity<Void> response = authController.logout(servletRequest);

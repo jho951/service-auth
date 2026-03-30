@@ -1,9 +1,6 @@
 services:
   auth-mysql:
-    container_name: auth-mysql
     image: mysql:8.0
-    ports:
-      - "3307:3306"
     volumes:
       - type: volume
         source: auth-mysql-volume
@@ -22,3 +19,5 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - auth-private

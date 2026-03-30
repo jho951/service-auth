@@ -10,7 +10,6 @@ import com.authservice.app.domain.auth.repository.AuthRepository;
 
 @Component
 public class AuthUserFinder implements UserFinder {
-
 	private final AuthRepository authRepository;
 	private final UserDirectory userDirectory;
 	private final AuthUserCacheStore authUserCacheStore;
@@ -31,7 +30,7 @@ public class AuthUserFinder implements UserFinder {
 		return authRepository.findByLoginId(username)
 			.filter(auth -> !auth.isAccountLocked())
 			.flatMap(auth -> userDirectory.findByUserId(auth.getUserId())
-				.filter(user -> "ACTIVE".equalsIgnoreCase(user.status()))
+				.filter(user -> "A".equalsIgnoreCase(user.status()))
 				.map(user -> {
 					User found = new User(
 						String.valueOf(user.userId()),

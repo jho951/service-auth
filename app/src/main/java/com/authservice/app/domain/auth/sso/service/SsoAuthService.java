@@ -1,6 +1,10 @@
 package com.authservice.app.domain.auth.sso.service;
 
 import com.auth.config.AuthProperties;
+import com.auth.config.controller.RefreshCookieWriter;
+import com.auth.api.model.Principal;
+import com.auth.api.model.Tokens;
+import com.auth.spi.TokenService;
 import com.authservice.app.domain.auth.sso.config.SsoProperties;
 import com.authservice.app.domain.auth.sso.model.GithubUserProfile;
 import com.authservice.app.domain.auth.sso.model.SsoPageType;
@@ -9,17 +13,25 @@ import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoSessionPayl
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoStatePayload;
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoTicketPayload;
 import com.authservice.app.domain.auth.sso.model.SsoTargetPage;
+import com.authservice.app.domain.audit.service.AuthAuditLogService;
 import com.authservice.app.common.base.constant.ErrorCode;
 import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.app.domain.auth.userdirectory.service.UserDirectory;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.net.URI;
+import java.util.ArrayList;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -33,23 +45,35 @@ public class SsoAuthService {
 	private final AuthProperties authProperties;
 	private final SsoSessionStore sessionStore;
 	private final SsoUserService ssoUserService;
+	private final UserDirectory userDirectory;
+	private final TokenService tokenService;
+	private final RefreshCookieWriter refreshCookieWriter;
 	private final SsoCookieService cookieService;
 	private final AdminIpGuardService adminIpGuardService;
+	private final AuthAuditLogService authAuditLogService;
 
 	public SsoAuthService(
 		SsoProperties properties,
 		AuthProperties authProperties,
 		SsoSessionStore sessionStore,
 		SsoUserService ssoUserService,
+		UserDirectory userDirectory,
+		TokenService tokenService,
+		RefreshCookieWriter refreshCookieWriter,
 		SsoCookieService cookieService,
-		AdminIpGuardService adminIpGuardService
+		AdminIpGuardService adminIpGuardService,
+		AuthAuditLogService authAuditLogService
 	) {
 		this.properties = properties;
 		this.authProperties = authProperties;
 		this.sessionStore = sessionStore;
 		this.ssoUserService = ssoUserService;
+		this.userDirectory = userDirectory;
+		this.tokenService = tokenService;
+		this.refreshCookieWriter = refreshCookieWriter;
 		this.cookieService = cookieService;
 		this.adminIpGuardService = adminIpGuardService;
+		this.authAuditLogService = authAuditLogService;
 	}
 
 	public org.springframework.http.ResponseEntity<Void> startGithubLogin(String page, String redirectUri, HttpServletRequest request) {
@@ -109,34 +133,73 @@ public class SsoAuthService {
 				payload.getName(),
 				payload.getAvatarUrl(),
 				payload.getRoles(),
+				payload.getStatus(),
 				expiresAt
 			),
 			expiresAt
 		);
+		authAuditLogService.logSsoLoginSuccess(payload.getUserId(), "github");
 
-		return cookieService.writeSessionCookie(sessionId);
+		Principal principal = new Principal(
+			payload.getUserId(),
+			payload.getRoles() == null ? List.of() : payload.getRoles()
+		);
+		String accessToken = tokenService.issueAccessToken(principal);
+		String refreshToken = tokenService.issueRefreshToken(principal);
+		Tokens tokens = new Tokens(accessToken, refreshToken);
+		String sessionCookie = cookieService.buildSessionCookie(sessionId);
+		String accessTokenCookie = cookieService.buildAccessTokenCookie(accessToken);
+
+		org.springframework.http.ResponseEntity<Void> refreshCookieResponse = refreshCookieWriter.write(
+			tokens,
+			org.springframework.http.ResponseEntity.noContent().build()
+		);
+
+		HttpHeaders mergedHeaders = new HttpHeaders();
+		refreshCookieResponse.getHeaders().forEach((key, values) -> {
+			if (values == null) {
+				return;
+			}
+			for (String value : values) {
+				mergedHeaders.add(key, value);
+			}
+		});
+		mergedHeaders.add(HttpHeaders.SET_COOKIE, sessionCookie);
+		mergedHeaders.add(HttpHeaders.SET_COOKIE, accessTokenCookie);
+
+		return org.springframework.http.ResponseEntity.status(refreshCookieResponse.getStatusCode())
+			.headers(mergedHeaders)
+			.build();
 	}
 
 	public org.springframework.http.ResponseEntity<com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse> validateInternalSession(
 		HttpServletRequest request
 	) {
 		String sessionId = cookieService.extractSessionId(request).orElse(null);
-		if (sessionId == null || sessionId.isBlank()) {
-			return org.springframework.http.ResponseEntity.status(401)
-				.body(new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(false, "", "", ""));
+		if (sessionId != null && !sessionId.isBlank()) {
+			Optional<SsoSessionPayload> sessionPayload = sessionStore.findSession(sessionId);
+			if (sessionPayload.isPresent()) {
+				SsoSessionPayload payload = sessionPayload.get();
+				return org.springframework.http.ResponseEntity.ok(
+					new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(
+						true,
+						payload.getUserId(),
+						resolvePrimaryRole(payload),
+						payload.getStatus(),
+						sessionId
+					)
+				);
+			}
 		}
 
-		return sessionStore.findSession(sessionId)
-			.map(payload -> org.springframework.http.ResponseEntity.ok(
-				new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(
-					true,
-					payload.getUserId(),
-					resolvePrimaryRole(payload),
-					sessionId
-				)
-			))
-			.orElseGet(() -> org.springframework.http.ResponseEntity.status(401)
-				.body(new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(false, "", "", "")));
+		Optional<com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse> jwtValidation =
+			resolveFromJwtAuthentication();
+		if (jwtValidation.isPresent()) {
+			return org.springframework.http.ResponseEntity.ok(jwtValidation.get());
+		}
+
+		return org.springframework.http.ResponseEntity.status(401)
+			.body(new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(false, "", "", "", ""));
 	}
 
 	public URI completeOAuthLogin(SsoPrincipal principal, HttpServletRequest request) {
@@ -152,6 +215,7 @@ public class SsoAuthService {
 				principal.getName(),
 				principal.getAvatarUrl(),
 				principal.getRoles(),
+				principal.getStatus(),
 				statePayload.getPageType(),
 				expiresAt
 			),
@@ -193,30 +257,58 @@ public class SsoAuthService {
 			payload.getEmail(),
 			payload.getName(),
 			payload.getAvatarUrl(),
-			payload.getRoles() == null ? List.of() : payload.getRoles()
+			payload.getRoles() == null ? List.of() : payload.getRoles(),
+			payload.getStatus()
 		);
 	}
 
 	public org.springframework.http.ResponseEntity<Void> logout(HttpServletRequest request) {
-		cookieService.extractSessionId(request).ifPresent(sessionId -> {
-			sessionStore.revokeSession(sessionId);
-		});
-		return cookieService.clearSessionCookie();
+		String actorId = cookieService.extractSessionId(request)
+			.flatMap(sessionStore::findSession)
+			.map(SsoSessionPayload::getUserId)
+			.filter(userId -> userId != null && !userId.isBlank())
+			.orElse("unknown");
+		cookieService.extractSessionId(request).ifPresent(sessionStore::revokeSession);
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication != null && authentication.isAuthenticated() && authentication.getName() != null && !authentication.getName().isBlank()) {
+			actorId = authentication.getName();
+		}
+		authAuditLogService.logLogout(actorId, "SSO");
+		org.springframework.http.ResponseEntity<Void> response = org.springframework.http.ResponseEntity.noContent()
+			.header(HttpHeaders.SET_COOKIE, cookieService.clearSessionCookieValue())
+			.header(HttpHeaders.SET_COOKIE, cookieService.clearAccessTokenCookie())
+			.build();
+		return refreshCookieWriter.clear(response);
 	}
 
 	private SsoStatePayload consumeOAuthState(HttpServletRequest request) {
-		String state = cookieService.extractOAuthState(request)
-			.or(() -> extractOAuthStateFromSession(request))
-			.orElseThrow(() -> {
-				log.warn("OAuth callback rejected: state cookie/session missing");
-				return new GlobalException(ErrorCode.INVALID_REQUEST);
-			});
+		List<String> candidates = new ArrayList<>();
+		cookieService.extractOAuthState(request).ifPresent(candidates::add);
+		extractOAuthStateFromSession(request).ifPresent(candidates::add);
+		extractOAuthStateFromRequest(request).ifPresent(candidates::add);
 
-		return sessionStore.consumeState(state)
-			.orElseThrow(() -> {
-				log.warn("OAuth callback rejected: state not found or expired. state={}", state);
-				return new GlobalException(ErrorCode.INVALID_REQUEST);
-			});
+		if (candidates.isEmpty()) {
+			log.warn("OAuth callback rejected: state cookie/session/query missing");
+			throw new GlobalException(ErrorCode.INVALID_REQUEST);
+		}
+
+		for (String candidate : candidates) {
+			Optional<SsoStatePayload> payload = sessionStore.consumeState(candidate);
+			if (payload.isPresent()) {
+				return payload.get();
+			}
+		}
+
+		log.warn("OAuth callback rejected: state not found or expired. candidates={}", candidates);
+		throw new GlobalException(ErrorCode.INVALID_REQUEST);
+	}
+
+	private Optional<String> extractOAuthStateFromRequest(HttpServletRequest request) {
+		String state = request.getParameter("state");
+		if (state == null || state.isBlank()) {
+			return Optional.empty();
+		}
+		return Optional.of(state);
 	}
 
 	private Optional<String> extractOAuthStateFromSession(HttpServletRequest request) {
@@ -293,5 +385,55 @@ public class SsoAuthService {
 		}
 		String role = payload.getRoles().get(0);
 		return role == null ? "" : role;
+	}
+
+	private Optional<com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse> resolveFromJwtAuthentication() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !authentication.isAuthenticated()) {
+			return Optional.empty();
+		}
+
+		String userId = authentication.getName();
+		if (userId == null || userId.isBlank() || "anonymousUser".equalsIgnoreCase(userId)) {
+			return Optional.empty();
+		}
+
+		String role = resolvePrimaryRole(authentication.getAuthorities());
+		String status = resolveStatus(userId);
+		return Optional.of(new com.authservice.app.domain.auth.sso.dto.SsoResponse.InternalSessionValidationResponse(
+			true,
+			userId,
+			role,
+			status,
+			""
+		));
+	}
+
+	private String resolveStatus(String userId) {
+		try {
+			return userDirectory.findByUserId(UUID.fromString(userId))
+				.map(profile -> profile.status() == null || profile.status().isBlank() ? "A" : profile.status())
+				.orElse("A");
+		} catch (IllegalArgumentException ex) {
+			return "A";
+		} catch (RuntimeException ex) {
+			return "A";
+		}
+	}
+
+	private String resolvePrimaryRole(Collection<? extends GrantedAuthority> authorities) {
+		if (authorities == null || authorities.isEmpty()) {
+			return "";
+		}
+		for (GrantedAuthority authority : authorities) {
+			if (authority == null || authority.getAuthority() == null) {
+				continue;
+			}
+			String value = authority.getAuthority();
+			if (!value.isBlank()) {
+				return value;
+			}
+		}
+		return "";
 	}
 }

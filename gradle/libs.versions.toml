@@ -6,6 +6,7 @@ auth-library = "2.0.5"
 auth-starter = "1.1.4"
 ip-guard = "2.0.5"
 junit-jupiter = "5.11.3"
+audit-log = "1.0.1"
 
 [libraries]
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
@@ -22,6 +23,7 @@ auth-hybrid-starter = { module = "io.github.jho951:auth-hybrid-spring-boot-start
 auth-session = { module = "io.github.jho951:auth-session", version.ref = "auth-library" }
 auth-starter = { module = "io.github.jho951:auth-starter", version.ref = "auth-starter" }
 ip-guard-starter = { module = "io.github.jho951:ip-guard-spring-boot-starter", version.ref = "ip-guard" }
+audit-log-config = { module = "io.github.jho951:config", version.ref = "audit-log" }
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }

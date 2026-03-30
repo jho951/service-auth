@@ -6,8 +6,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +16,6 @@ public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
 	private static final String USER_PREFIX = "refresh:user:";
 
 	private final RedisTemplate<String, Object> redisTemplate;
-	private final Map<String, Instant> fallbackStore = new ConcurrentHashMap<>();
 
 	public AuthRedisRefreshTokenStore(RedisTemplate<String, Object> redisTemplate) {
 		this.redisTemplate = redisTemplate;
@@ -39,8 +36,7 @@ public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
 			redisTemplate.opsForValue().set(tokenKey, metadata, ttl);
 			redisTemplate.opsForValue().set(userKey, tokenKey, ttl);
 		} catch (RuntimeException ex) {
-			fallbackStore.put(tokenKey, expiresAt);
-			fallbackStore.put(userKey, expiresAt);
+			// keep auth flow available when Redis is unavailable
 		}
 	}
 
@@ -51,15 +47,7 @@ public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
 			Boolean exists = redisTemplate.hasKey(key);
 			return Boolean.TRUE.equals(exists);
 		} catch (RuntimeException ex) {
-			Instant expiresAt = fallbackStore.get(key);
-			if (expiresAt == null) {
-				return false;
-			}
-			if (expiresAt.isBefore(Instant.now())) {
-				fallbackStore.remove(key);
-				return false;
-			}
-			return true;
+			return false;
 		}
 	}
 
@@ -95,7 +83,7 @@ public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
 		try {
 			redisTemplate.delete(key);
 		} catch (RuntimeException ex) {
-			fallbackStore.remove(key);
+			// keep auth flow available when Redis is unavailable
 		}
 	}
 

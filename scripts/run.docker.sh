@@ -3,21 +3,13 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-DOCKER_DIR="$PROJECT_ROOT/docker"
+COMPOSE_PROJECT_NAME="auth-service"
 
 ACTION=${1:-up}
 ENV=${2:-dev}
 TARGET=${3:-all}
-SOURCE_ENV_FILE="$PROJECT_ROOT/.env.$ENV"
-
-APP_COMPOSE_FILES=(
-  "$DOCKER_DIR/docker-compose.app.yml"
-  "$DOCKER_DIR/services/mysql/$ENV/docker-compose.mysql.yml"
-)
-
 case "$TARGET" in
   all|app)
-    COMPOSE_FILES=("${APP_COMPOSE_FILES[@]}")
     ;;
   *)
     echo "Invalid target: $TARGET"
@@ -36,49 +28,45 @@ case "$ACTION" in
     ;;
 esac
 
-[[ -n "${ES_COMPOSE:-}" ]] && COMPOSE_FILES+=("$ES_COMPOSE")
+case "$ENV" in
+  dev)
+    COMPOSE_FILE="$PROJECT_ROOT/compose.auth-service.dev.yml"
+    ;;
+  prod)
+    COMPOSE_FILE="$PROJECT_ROOT/compose.auth-service.prod.yml"
+    ;;
+  *)
+    echo "Invalid env: $ENV"
+    echo "Usage: ./scripts/run.docker.sh [up|down] [dev|prod] [all|app]"
+    exit 1
+    ;;
+esac
 
-if [[ ! -f "$SOURCE_ENV_FILE" ]]; then
-  echo "Source env file not found: $SOURCE_ENV_FILE"
-  exit 1
-fi
-
-missing_files=()
-for f in "${COMPOSE_FILES[@]}"; do
-  if [[ -z "${f:-}" ]]; then
-    missing_files+=("<empty-entry-in-COMPOSE_FILES>")
-    continue
-  fi
-  [[ -f "$f" ]] || missing_files+=("$f")
-done
-
-if (( ${#missing_files[@]} > 0 )); then
-  echo "Missing compose files:"
-  for f in "${missing_files[@]}"; do
-    echo "  $f"
-  done
-  echo "Check ENV='$ENV', TARGET='$TARGET', and optional ES_COMPOSE."
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  echo "Compose file not found: $COMPOSE_FILE"
   exit 1
 fi
 
 echo "Environment: $ENV"
 echo "Target: $TARGET"
 echo "Action: $ACTION"
-echo "Using source env file: $SOURCE_ENV_FILE"
-echo "Using Docker Compose files:"
-for f in "${COMPOSE_FILES[@]}"; do
-  echo "  $f"
-done
+echo "Using Docker Compose file: $COMPOSE_FILE"
 
-COMPOSE_ARGS=()
-for f in "${COMPOSE_FILES[@]}"; do
-  COMPOSE_ARGS+=("-f" "$f")
-done
+ensure_network() {
+  local network_name="$1"
+  if [[ -z "${network_name:-}" ]]; then
+    return 0
+  fi
+  if ! docker network inspect "$network_name" >/dev/null 2>&1; then
+    echo "Creating external network: $network_name"
+    docker network create "$network_name" >/dev/null
+  fi
+}
 
 if [[ "$ACTION" == "up" ]]; then
-  ENV_FILE_PATH="$SOURCE_ENV_FILE" docker compose --env-file "$SOURCE_ENV_FILE" \
-    "${COMPOSE_ARGS[@]}" up --build -d
+  ensure_network "msa-service-shared"
+  ensure_network "redis-core"
+  docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" up --build -d
 else
-  ENV_FILE_PATH="$SOURCE_ENV_FILE" docker compose --env-file "$SOURCE_ENV_FILE" \
-    "${COMPOSE_ARGS[@]}" down --remove-orphans -v
+  docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" down --remove-orphans -v
 fi

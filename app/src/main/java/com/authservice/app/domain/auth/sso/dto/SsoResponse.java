@@ -8,12 +8,14 @@ public class SsoResponse {
 		private final boolean authenticated;
 		private final String userId;
 		private final String role;
+		private final String status;
 		private final String sessionId;
 
-		public InternalSessionValidationResponse(boolean authenticated, String userId, String role, String sessionId) {
+		public InternalSessionValidationResponse(boolean authenticated, String userId, String role, String status, String sessionId) {
 			this.authenticated = authenticated;
 			this.userId = userId;
 			this.role = role;
+			this.status = status;
 			this.sessionId = sessionId;
 		}
 
@@ -29,6 +31,10 @@ public class SsoResponse {
 			return role;
 		}
 
+		public String getStatus() {
+			return status;
+		}
+
 		public String getSessionId() {
 			return sessionId;
 		}
@@ -40,13 +46,15 @@ public class SsoResponse {
 		private final String name;
 		private final String avatarUrl;
 		private final List<String> roles;
+		private final String status;
 
-		public MeResponse(String id, String email, String name, String avatarUrl, List<String> roles) {
+		public MeResponse(String id, String email, String name, String avatarUrl, List<String> roles, String status) {
 			this.id = id;
 			this.email = email;
 			this.name = name;
 			this.avatarUrl = avatarUrl;
 			this.roles = roles;
+			this.status = status;
 		}
 
 		public String getId() {
@@ -67,6 +75,10 @@ public class SsoResponse {
 
 		public List<String> getRoles() {
 			return roles;
+		}
+
+		public String getStatus() {
+			return status;
 		}
 	}
 }

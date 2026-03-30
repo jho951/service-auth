@@ -15,21 +15,28 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
 import com.authservice.app.domain.auth.service.AuthRequestContext;
 import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
+import com.authservice.app.domain.auth.sso.service.SsoCookieService;
+import org.springframework.http.HttpHeaders;
 
 /** 인증 및 인가 처리 담당 컨트롤러입니다. */
 public class AuthController {
+
+	private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
 	private final AuthService authService;
 	private final RefreshTokenExtractor refreshTokenExtractor;
 	private final RefreshCookieWriter refreshCookieWriter;
 	private final AuthAccountPolicyService authAccountPolicyService;
 	private final AuthLoginAttemptService authLoginAttemptService;
+	private final SsoCookieService ssoCookieService;
 
 	/**
 	 * 생성자
@@ -44,13 +51,15 @@ public class AuthController {
 		RefreshTokenExtractor refreshTokenExtractor,
 		RefreshCookieWriter refreshCookieWriter,
 		AuthAccountPolicyService authAccountPolicyService,
-		AuthLoginAttemptService authLoginAttemptService
+		AuthLoginAttemptService authLoginAttemptService,
+		SsoCookieService ssoCookieService
 	) {
 		this.authService = authService;
 		this.refreshTokenExtractor = refreshTokenExtractor;
 		this.refreshCookieWriter = refreshCookieWriter;
 		this.authAccountPolicyService = authAccountPolicyService;
 		this.authLoginAttemptService = authLoginAttemptService;
+		this.ssoCookieService = ssoCookieService;
 	}
 
 	/**
@@ -78,11 +87,18 @@ public class AuthController {
 
 			return ResponseEntity.status(response.getStatusCode())
 				.headers(response.getHeaders())
+				.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.getAccessToken()))
 				.body(new AuthResponse.TokenResponse(tokens.getAccessToken(), tokens.getRefreshToken()));
 
 		} catch (RuntimeException ex) {
 			Optional<Auth> auth = authAccountPolicyService.markLoginFailure(req.getUsername());
 			authLoginAttemptService.record(req.getUsername(), context, "FAILURE");
+			log.warn("Login failed. method=POST uri=/login username={} ip={} userAgent={} exceptionType={} message={}",
+				req.getUsername(),
+				context.ip(),
+				context.userAgent(),
+				ex.getClass().getSimpleName(),
+				ex.getMessage());
 			throw ex;
 		}
 	}
@@ -105,6 +121,7 @@ public class AuthController {
 
 		return ResponseEntity.status(response.getStatusCode())
 			.headers(response.getHeaders())
+			.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.getAccessToken()))
 			.body(new AuthResponse.TokenResponse(tokens.getAccessToken(), tokens.getRefreshToken()));
 	}
 
@@ -119,7 +136,10 @@ public class AuthController {
 	public ResponseEntity<Void> logout(HttpServletRequest request) {
 		String refreshToken = refreshTokenExtractor.extract(request);
 		authService.logout(refreshToken);
-
-		return refreshCookieWriter.clear(ResponseEntity.noContent().build());
+		ResponseEntity<Void> response = refreshCookieWriter.clear(ResponseEntity.noContent().build());
+		return ResponseEntity.status(response.getStatusCode())
+			.headers(response.getHeaders())
+			.header(HttpHeaders.SET_COOKIE, ssoCookieService.clearAccessTokenCookie())
+			.build();
 	}
 }

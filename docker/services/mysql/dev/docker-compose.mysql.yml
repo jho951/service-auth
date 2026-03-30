@@ -1,9 +1,6 @@
 services:
   auth-mysql:
-    container_name: auth-mysql
     image: mysql:8.0
-    ports:
-      - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DB}
@@ -27,3 +24,5 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - auth-private

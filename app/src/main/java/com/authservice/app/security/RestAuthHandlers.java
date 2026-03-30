@@ -3,6 +3,8 @@ package com.authservice.app.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -15,11 +17,19 @@ import java.util.Map;
 @Component
 public class RestAuthHandlers {
 
+	private static final Logger log = LoggerFactory.getLogger(RestAuthHandlers.class);
+
 	@Component
 	public static class EntryPoint implements AuthenticationEntryPoint {
 		@Override
 		public void commence(HttpServletRequest req, HttpServletResponse res,
 			org.springframework.security.core.AuthenticationException e) throws IOException {
+			log.warn("Unauthorized request rejected by security. method={} uri={} ip={} exceptionType={} message={}",
+				req.getMethod(),
+				req.getRequestURI(),
+				resolveClientIp(req),
+				e.getClass().getSimpleName(),
+				e.getMessage());
 			res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 			res.setContentType(MediaType.APPLICATION_JSON_VALUE);
 			new ObjectMapper().writeValue(res.getOutputStream(), Map.of("error", "Unauthorized"));
@@ -34,5 +44,15 @@ public class RestAuthHandlers {
 			res.setContentType(MediaType.APPLICATION_JSON_VALUE);
 			new ObjectMapper().writeValue(res.getOutputStream(), Map.of("error", "Forbidden"));
 		}
+	}
+
+	private static String resolveClientIp(HttpServletRequest request) {
+		String xff = request.getHeader("X-Forwarded-For");
+		if (xff != null && !xff.isBlank()) {
+			int comma = xff.indexOf(',');
+			return comma > -1 ? xff.substring(0, comma).trim() : xff.trim();
+		}
+		String remoteAddr = request.getRemoteAddr();
+		return remoteAddr == null ? "unknown" : remoteAddr;
 	}
 }

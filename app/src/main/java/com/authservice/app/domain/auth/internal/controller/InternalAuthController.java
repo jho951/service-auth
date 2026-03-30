@@ -31,10 +31,11 @@ public class InternalAuthController {
 
 	@PostMapping
 	public GlobalResponse<InternalAuthResponse.AccountResponse> createAccount(
-		@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+		@RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+		@RequestHeader(name = InternalApiProperties.INTERNAL_SECRET_HEADER, required = false) String internalRequestSecret,
 		@Valid @RequestBody InternalAuthRequest.CreateAccountRequest request
 	) {
-		internalApiProperties.validateAuthorizationHeader(authorization);
+		internalApiProperties.validateInternalAccess(authorization, internalRequestSecret);
 		return GlobalResponse.ok(
 			SuccessCode.CREATE_SUCCESS,
 			internalAuthAccountService.createAccount(request)
@@ -43,10 +44,11 @@ public class InternalAuthController {
 
 	@DeleteMapping("/{userId}")
 	public GlobalResponse<Void> deleteAccount(
-		@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+		@RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+		@RequestHeader(name = InternalApiProperties.INTERNAL_SECRET_HEADER, required = false) String internalRequestSecret,
 		@PathVariable UUID userId
 	) {
-		internalApiProperties.validateAuthorizationHeader(authorization);
+		internalApiProperties.validateInternalAccess(authorization, internalRequestSecret);
 		internalAuthAccountService.deleteAccount(userId);
 		return GlobalResponse.ok(SuccessCode.DELETE_SUCCESS);
 	}

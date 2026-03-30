@@ -13,12 +13,21 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "internal.api")
 public class InternalApiProperties {
 
+	public static final String INTERNAL_SECRET_HEADER = "X-Internal-Request-Secret";
+
 	private String key;
 
-	public void validateAuthorizationHeader(String authorization) {
+	public void validateInternalAccess(String authorization, String internalRequestSecret) {
+		if (isValidAuthorizationHeader(authorization) || isValidInternalSecret(internalRequestSecret)) return;
+		throw new GlobalException(ErrorCode.UNAUTHORIZED);
+	}
+
+	private boolean isValidAuthorizationHeader(String authorization) {
 		String expected = "Bearer " + key;
-		if (key == null || key.isBlank() || !expected.equals(authorization)) {
-			throw new GlobalException(ErrorCode.UNAUTHORIZED);
-		}
+		return key != null && !key.isBlank() && expected.equals(authorization);
+	}
+
+	private boolean isValidInternalSecret(String internalRequestSecret) {
+		return key != null && !key.isBlank() && key.equals(internalRequestSecret);
 	}
 }

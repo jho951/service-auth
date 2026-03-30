@@ -7,17 +7,22 @@ import com.auth.core.service.AuthService;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
 import com.authservice.app.domain.auth.entity.Auth;
+import com.authservice.app.domain.audit.service.AuthAuditLogService;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
 import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
 import com.authservice.app.domain.auth.service.AuthRequestContext;
+import com.authservice.app.domain.auth.sso.service.SsoCookieService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.Optional;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 외부 망 또는 Gateway 계층에서 진입하는 인증 요청을 처리하는 컨트롤러입니다.
@@ -27,11 +32,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthGatewayController {
 
+	private static final Logger log = LoggerFactory.getLogger(AuthGatewayController.class);
+
 	private final AuthService authService;
 	private final RefreshTokenExtractor refreshTokenExtractor;
 	private final RefreshCookieWriter refreshCookieWriter;
 	private final AuthAccountPolicyService authAccountPolicyService;
 	private final AuthLoginAttemptService authLoginAttemptService;
+	private final SsoCookieService ssoCookieService;
+	private final AuthAuditLogService authAuditLogService;
 
 	/**
 	 * 생성자 생성
@@ -46,13 +55,17 @@ public class AuthGatewayController {
 		RefreshTokenExtractor refreshTokenExtractor,
 		RefreshCookieWriter refreshCookieWriter,
 		AuthAccountPolicyService authAccountPolicyService,
-		AuthLoginAttemptService authLoginAttemptService
+		AuthLoginAttemptService authLoginAttemptService,
+		SsoCookieService ssoCookieService,
+		AuthAuditLogService authAuditLogService
 	) {
 		this.authService = authService;
 		this.refreshTokenExtractor = refreshTokenExtractor;
 		this.refreshCookieWriter = refreshCookieWriter;
 		this.authAccountPolicyService = authAccountPolicyService;
 		this.authLoginAttemptService = authLoginAttemptService;
+		this.ssoCookieService = ssoCookieService;
+		this.authAuditLogService = authAuditLogService;
 	}
 
 	/**
@@ -69,6 +82,7 @@ public class AuthGatewayController {
 			Tokens tokens = authService.login(req.getUsername(), req.getPassword());
 			Optional<Auth> auth = authAccountPolicyService.markLoginSuccess(req.getUsername());
 			authLoginAttemptService.record(req.getUsername(), context, "SUCCESS");
+			authAuditLogService.logPasswordLoginSuccess(req.getUsername());
 
 			ResponseEntity<Void> response = refreshCookieWriter.write(
 				tokens,
@@ -76,10 +90,18 @@ public class AuthGatewayController {
 			);
 			return ResponseEntity.status(response.getStatusCode())
 				.headers(response.getHeaders())
+				.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.getAccessToken()))
 				.body(new AuthResponse.TokenResponse(tokens.getAccessToken(), tokens.getRefreshToken()));
 		} catch (RuntimeException ex) {
 			Optional<Auth> auth = authAccountPolicyService.markLoginFailure(req.getUsername());
 			authLoginAttemptService.record(req.getUsername(), context, "FAILURE");
+			log.warn("Login failed. method=POST uri=/auth/login username={} ip={} userAgent={} exceptionType={} message={}",
+				req.getUsername(),
+				context.ip(),
+				context.userAgent(),
+				ex.getClass().getSimpleName(),
+				ex.getMessage());
+			authAuditLogService.logPasswordLoginFailure(req.getUsername(), "INVALID_CREDENTIALS_OR_POLICY");
 			throw ex;
 		}
 	}
@@ -101,6 +123,7 @@ public class AuthGatewayController {
 		);
 		return ResponseEntity.status(response.getStatusCode())
 			.headers(response.getHeaders())
+			.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.getAccessToken()))
 			.body(new AuthResponse.TokenResponse(tokens.getAccessToken(), tokens.getRefreshToken()));
 	}
 }

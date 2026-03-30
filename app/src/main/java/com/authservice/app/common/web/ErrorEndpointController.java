@@ -32,25 +32,18 @@ public class ErrorEndpointController {
 	@RequestMapping(value = "/error", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, Object>> error(HttpServletRequest request) {
 
-		// RequestDispatcher에서 표준 에러 속성 추출
 		Object statusCode = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);
 		Object message = request.getAttribute(RequestDispatcher.ERROR_MESSAGE);
 
-		// 상태 코드 파싱 (Java 17 Pattern Matching 사용)
 		int rawStatus = statusCode instanceof Integer code ? code : 500;
 
-		// 정수형 코드를 HttpStatus 열거형으로 변환
 		HttpStatus status = HttpStatus.resolve(rawStatus);
-		if (status == null) {
-			status = HttpStatus.INTERNAL_SERVER_ERROR;
-		}
+		if (status == null) status = HttpStatus.INTERNAL_SERVER_ERROR;
 
-		// 에러 메시지 결정: 전달된 메시지가 없으면 HTTP 상태의 기본 문구 사용
 		String errorMessage = message instanceof String text && !text.isBlank()
 			? text
 			: status.getReasonPhrase();
 
-		// 최종 JSON 응답 반환
 		return ResponseEntity.status(status)
 			.contentType(MediaType.APPLICATION_JSON)
 			.body(Map.of(

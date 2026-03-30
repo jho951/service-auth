@@ -2,6 +2,7 @@ package com.authservice.app.domain.auth.internal.service;
 
 import com.authservice.app.common.base.constant.ErrorCode;
 import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.app.domain.audit.service.AuthAuditLogService;
 import com.authservice.app.domain.auth.entity.Auth;
 import com.authservice.app.domain.auth.internal.dto.InternalAuthRequest;
 import com.authservice.app.domain.auth.internal.dto.InternalAuthResponse;
@@ -19,6 +20,7 @@ public class InternalAuthAccountService {
 
 	private final AuthRepository authRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final AuthAuditLogService authAuditLogService;
 
 	@Transactional
 	public InternalAuthResponse.AccountResponse createAccount(InternalAuthRequest.CreateAccountRequest request) {
@@ -33,6 +35,7 @@ public class InternalAuthAccountService {
 				.loginId(request.getLoginId())
 				.passwordHash(passwordEncoder.encode(request.getPassword()))
 				.build());
+			authAuditLogService.logInternalAccountCreate(String.valueOf(auth.getUserId()), auth.getUsername());
 
 			return InternalAuthResponse.AccountResponse.from(auth.getId(), auth.getUserId(), auth.getUsername());
 		} catch (DataIntegrityViolationException e) {
@@ -47,5 +50,6 @@ public class InternalAuthAccountService {
 		Auth auth = authRepository.findByUserId(userId)
 			.orElseThrow(() -> new GlobalException(ErrorCode.NOT_FOUND_AUTH_ACCOUNT));
 		authRepository.delete(auth);
+		authAuditLogService.logInternalAccountDelete(String.valueOf(userId));
 	}
 }

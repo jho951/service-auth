@@ -5,21 +5,21 @@ import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoStatePayloa
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoTicketPayload;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SsoSessionStore {
+	private static final Logger log = LoggerFactory.getLogger(SsoSessionStore.class);
 
 	private static final String STATE_PREFIX = "oauth:state:";
 	private static final String TICKET_PREFIX = "sso:ticket:";
 	private static final String SESSION_PREFIX = "sso:session:";
 
 	private final RedisTemplate<String, Object> redisTemplate;
-	private final Map<String, ExpiringValue> fallbackStore = new ConcurrentHashMap<>();
 
 	public SsoSessionStore(RedisTemplate<String, Object> redisTemplate) {
 		this.redisTemplate = redisTemplate;
@@ -62,7 +62,7 @@ public class SsoSessionStore {
 		try {
 			redisTemplate.opsForValue().set(key, payload, ttl);
 		} catch (RuntimeException ex) {
-			fallbackStore.put(key, new ExpiringValue(payload, expiresAt));
+			log.warn("Redis write failed for key={}. Ignoring write and continuing.", key, ex);
 		}
 	}
 
@@ -78,9 +78,10 @@ public class SsoSessionStore {
 			if (type.isInstance(value)) {
 				return Optional.of(type.cast(value));
 			}
-			return findFallback(key, type);
+			return Optional.empty();
 		} catch (RuntimeException ex) {
-			return findFallback(key, type);
+			log.warn("Redis read failed for key={}. Returning cache miss.", key, ex);
+			return Optional.empty();
 		}
 	}
 
@@ -88,25 +89,7 @@ public class SsoSessionStore {
 		try {
 			redisTemplate.delete(key);
 		} catch (RuntimeException ex) {
-			fallbackStore.remove(key);
+			log.warn("Redis delete failed for key={}. Ignoring delete and continuing.", key, ex);
 		}
-	}
-
-	private <T> Optional<T> findFallback(String key, Class<T> type) {
-		ExpiringValue fallback = fallbackStore.get(key);
-		if (fallback == null || fallback.expiresAt().isBefore(Instant.now())) {
-			fallbackStore.remove(key);
-			return Optional.empty();
-		}
-
-		Object value = fallback.value();
-		if (type.isInstance(value)) {
-			return Optional.of(type.cast(value));
-		}
-
-		return Optional.empty();
-	}
-
-	private record ExpiringValue(Object value, Instant expiresAt) {
 	}
 }

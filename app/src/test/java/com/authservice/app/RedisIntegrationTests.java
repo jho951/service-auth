@@ -39,7 +39,7 @@ class RedisIntegrationTests {
 		ssoSessionStore.saveState(state, new SsoStatePayload("http://localhost/callback", "EDITOR", expiresAt), expiresAt);
 		ssoSessionStore.saveSession(
 			sessionId,
-			new SsoSessionPayload("user-1", "user@example.com", "User", null, List.of("USER"), expiresAt),
+			new SsoSessionPayload("user-1", "user@example.com", "User", null, List.of("USER"), "A", expiresAt),
 			expiresAt
 		);
 

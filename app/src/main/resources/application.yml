@@ -34,3 +34,16 @@ user-service:
     scope: ${USER_SERVICE_JWT_SCOPE:internal}
     ttl-seconds: ${USER_SERVICE_JWT_TTL_SECONDS:60}
     secret: ${USER_SERVICE_JWT_SECRET:${AUTH_JWT_SECRET:${JWT_ACCESS_TOKEN_SECRET:}}}
+
+auditlog:
+  enabled: ${AUDITLOG_ENABLED:true}
+  service-name: ${AUDITLOG_SERVICE_NAME:${spring.application.name}}
+  env: ${AUDITLOG_ENV:${SPRING_PROFILES_ACTIVE:local}}
+  file-path: ${AUDITLOG_FILE_PATH:./logs/audit.log}
+  elk-enabled: ${AUDITLOG_ELK_ENABLED:false}
+  elk-endpoint: ${AUDITLOG_ELK_ENDPOINT:}
+  elk-api-key: ${AUDITLOG_ELK_API_KEY:}
+  async-enabled: ${AUDITLOG_ASYNC_ENABLED:true}
+  async-thread-count: ${AUDITLOG_ASYNC_THREAD_COUNT:2}
+  async-queue-capacity: ${AUDITLOG_ASYNC_QUEUE_CAPACITY:1000}
+  web-enabled: ${AUDITLOG_WEB_ENABLED:true}

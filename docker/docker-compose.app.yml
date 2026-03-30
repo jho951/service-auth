@@ -1,6 +1,5 @@
 services:
   auth-service:
-    container_name: auth-service
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -25,21 +24,26 @@ services:
       auth-mysql:
         condition: service_healthy
     networks:
-      - app-internal
+      - service-shared
+      - auth-private
       - redis-core
 
   auth-mysql:
     env_file:
       - ${ENV_FILE_PATH}
     networks:
-      - app-internal
+      - auth-private
 
 volumes:
   auth-mysql-volume:
 
 networks:
-  app-internal:
+  service-shared:
+    external: true
+    name: ${SERVICE_SHARED_NETWORK:-msa-service-shared}
+  auth-private:
     driver: bridge
+    internal: true
   redis-core:
     external: true
     name: ${REDIS_NETWORK_NAME:-redis-core}

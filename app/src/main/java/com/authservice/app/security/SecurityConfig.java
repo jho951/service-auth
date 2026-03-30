@@ -48,17 +48,50 @@ public class SecurityConfig {
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 			.csrf(cs -> cs.ignoringRequestMatchers(
 				new AntPathRequestMatcher("/internal/auth/**"),
-				new AntPathRequestMatcher("/auth/exchange", HttpMethod.POST.name()),
-				new AntPathRequestMatcher("/auth/logout", HttpMethod.POST.name())
+				new AntPathRequestMatcher("/auth/login", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/auth/refresh", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/auth/logout", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/auth/internal/session/validate", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/v1/auth/login", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/v1/auth/refresh", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/v1/auth/logout", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/v1/auth/internal/session/validate", HttpMethod.POST.name()),
+				new AntPathRequestMatcher("/auth/exchange", HttpMethod.POST.name())
 			))
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 			.exceptionHandling(e -> e.authenticationEntryPoint(entryPoint).accessDeniedHandler(denied))
 				.authorizeHttpRequests(auth -> auth
 					.requestMatchers(
+						"/auth/session",
+						"/v1/auth/session"
+					).authenticated()
+					.requestMatchers(
+					"/",
+					"/v1",
 					"/.well-known/**",
 					"/v1/.well-known/**",
+					"/error",
 					"/internal/auth/**",
-					"/auth/**",
+					"/auth/login",
+					"/v1/auth/login",
+					"/auth/refresh",
+					"/v1/auth/refresh",
+					"/auth/logout",
+					"/v1/auth/logout",
+						"/auth/sso/start",
+						"/v1/auth/sso/start",
+						"/auth/oauth/github/callback",
+						"/v1/auth/oauth/github/callback",
+						"/auth/login/github",
+						"/v1/auth/login/github",
+						"/auth/oauth2/authorize/**",
+						"/v1/auth/oauth2/authorize/**",
+						"/auth/exchange",
+						"/v1/auth/exchange",
+						"/auth/me",
+						"/v1/auth/me",
+						"/auth/internal/session/validate",
+						"/v1/auth/internal/session/validate",
 					"/oauth2/**",
 					"/v1/oauth2/**",
 					"/login/oauth2/**",

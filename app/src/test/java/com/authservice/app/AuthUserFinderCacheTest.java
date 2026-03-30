@@ -61,7 +61,7 @@ class AuthUserFinderCacheTest {
 			.loginId("login-id")
 			.passwordHash("pw-hash")
 			.build();
-		UserAccountProfile profile = new UserAccountProfile(userId, "a@b.com", "name", "ADMIN", "ACTIVE", null);
+		UserAccountProfile profile = new UserAccountProfile(userId, "a@b.com", "name", "ADMIN", "A", null);
 
 		when(authUserCacheStore.get("login-id")).thenReturn(Optional.empty());
 		when(authRepository.findByLoginId("login-id")).thenReturn(Optional.of(auth));
@@ -73,5 +73,46 @@ class AuthUserFinderCacheTest {
 		assertThat(result.get().getUsername()).isEqualTo("login-id");
 		assertThat(result.get().getRoles()).containsExactly("ADMIN");
 		verify(authUserCacheStore).put(any(), any(), any(), any());
+	}
+
+	@Test
+	void acceptsShortActiveStatusFromUserService() {
+		UUID userId = UUID.randomUUID();
+		Auth auth = Auth.builder()
+			.userId(userId)
+			.loginId("short-active")
+			.passwordHash("pw-hash")
+			.build();
+		UserAccountProfile profile = new UserAccountProfile(userId, "a@b.com", "name", "USER", "A", null);
+
+		when(authUserCacheStore.get("short-active")).thenReturn(Optional.empty());
+		when(authRepository.findByLoginId("short-active")).thenReturn(Optional.of(auth));
+		when(userDirectory.findByUserId(userId)).thenReturn(Optional.of(profile));
+
+		Optional<User> result = authUserFinder.findByUsername("short-active");
+
+		assertThat(result).isPresent();
+		assertThat(result.get().getRoles()).containsExactly("USER");
+		verify(authUserCacheStore).put(any(), any(), any(), any());
+	}
+
+	@Test
+	void rejectsLegacyActiveStringStatus() {
+		UUID userId = UUID.randomUUID();
+		Auth auth = Auth.builder()
+			.userId(userId)
+			.loginId("legacy-active")
+			.passwordHash("pw-hash")
+			.build();
+		UserAccountProfile profile = new UserAccountProfile(userId, "a@b.com", "name", "USER", "ACTIVE", null);
+
+		when(authUserCacheStore.get("legacy-active")).thenReturn(Optional.empty());
+		when(authRepository.findByLoginId("legacy-active")).thenReturn(Optional.of(auth));
+		when(userDirectory.findByUserId(userId)).thenReturn(Optional.of(profile));
+
+		Optional<User> result = authUserFinder.findByUsername("legacy-active");
+
+		assertThat(result).isEmpty();
+		verify(authUserCacheStore, never()).put(any(), any(), any(), any());
 	}
 }

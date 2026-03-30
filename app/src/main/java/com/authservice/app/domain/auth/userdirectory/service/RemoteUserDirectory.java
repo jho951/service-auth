@@ -58,91 +58,24 @@ public class RemoteUserDirectory implements UserDirectory {
 	public UserAccountProfile provisionOAuth2User(OAuth2ProvisionCommand command) {
 		validateBaseUrl();
 		try {
-			Optional<UserAccountProfile> existingBySocial = findBySocial(command.provider(), command.providerUserId());
-			if (existingBySocial.isPresent()) {
-				return enrichProfile(existingBySocial.get(), command);
-			}
-
-			UserAccountProfile user = findByEmail(command.email())
-				.orElseGet(() -> createUser(command.email()));
-
-			linkSocial(user.userId(), command.provider(), command.providerUserId());
-
-			return findBySocial(command.provider(), command.providerUserId())
-				.map(profile -> enrichProfile(profile, command))
-				.orElseGet(() -> enrichProfile(user, command));
-		} catch (RuntimeException e) {
-			throw new GlobalException(ErrorCode.USER_SERVICE_UNAVAILABLE);
-		}
-	}
-
-	private Optional<UserAccountProfile> findByEmail(String email) {
-		try {
-			GlobalResponse<UserDetailResponse> response = restClient.get()
-				.uri(uriBuilder -> uriBuilder.path("/internal/users/by-email").queryParam("email", email).build())
-				.header(HttpHeaders.AUTHORIZATION, bearerToken())
-				.accept(MediaType.APPLICATION_JSON)
-				.retrieve()
-				.body(userDetailResponseType());
-			return Optional.ofNullable(response)
-				.map(GlobalResponse::data)
-				.map(UserDetailResponse::toProfile);
-		} catch (HttpClientErrorException.NotFound e) {
-			return Optional.empty();
-		}
-	}
-
-	private Optional<UserAccountProfile> findBySocial(String provider, String providerUserId) {
-		try {
-			GlobalResponse<UserDetailResponse> response = restClient.get()
-				.uri(uriBuilder -> uriBuilder.path("/internal/users/by-social")
-					.queryParam("socialType", toSocialType(provider))
-					.queryParam("providerId", providerUserId)
-					.build())
-				.header(HttpHeaders.AUTHORIZATION, bearerToken())
-				.accept(MediaType.APPLICATION_JSON)
-				.retrieve()
-				.body(userDetailResponseType());
-			return Optional.ofNullable(response)
-				.map(GlobalResponse::data)
-				.map(UserDetailResponse::toProfile);
-		} catch (HttpClientErrorException.NotFound e) {
-			return Optional.empty();
-		}
-	}
-
-	private UserAccountProfile createUser(String email) {
-		try {
 			GlobalResponse<UserDetailResponse> response = restClient.post()
-				.uri("/internal/users")
+				.uri("/internal/users/find-or-create-and-link-social")
 				.header(HttpHeaders.AUTHORIZATION, bearerToken())
 				.contentType(MediaType.APPLICATION_JSON)
 				.accept(MediaType.APPLICATION_JSON)
-				.body(new CreateUserRequest(email))
+				.body(new FindOrCreateAndLinkSocialRequest(
+					command.email(),
+					toSocialType(command.provider()),
+					command.providerUserId()
+				))
 				.retrieve()
 				.body(userDetailResponseType());
-
 			if (response == null || response.data() == null) {
 				throw new GlobalException(ErrorCode.USER_SERVICE_UNAVAILABLE);
 			}
-			return response.data().toProfile();
-		} catch (HttpClientErrorException.Conflict e) {
-			return findByEmail(email).orElseThrow(() -> new GlobalException(ErrorCode.USER_SERVICE_UNAVAILABLE));
-		}
-	}
-
-	private void linkSocial(UUID userId, String provider, String providerUserId) {
-		try {
-			restClient.post()
-				.uri("/internal/users/social")
-				.header(HttpHeaders.AUTHORIZATION, bearerToken())
-				.contentType(MediaType.APPLICATION_JSON)
-				.accept(MediaType.APPLICATION_JSON)
-				.body(new CreateSocialRequest(userId, toSocialType(provider), providerUserId))
-				.retrieve()
-				.toBodilessEntity();
-		} catch (HttpClientErrorException.Conflict e) {
-			// Another request may have linked the social account first; re-query handles that path.
+			return enrichProfile(response.data().toProfile(), command);
+		} catch (RuntimeException e) {
+			throw new GlobalException(ErrorCode.USER_SERVICE_UNAVAILABLE);
 		}
 	}
 
@@ -231,9 +164,10 @@ public class RemoteUserDirectory implements UserDirectory {
 		}
 	}
 
-	private record CreateUserRequest(String email) {
-	}
-
-	private record CreateSocialRequest(UUID userId, String socialType, String providerId) {
+	private record FindOrCreateAndLinkSocialRequest(
+		String email,
+		String socialType,
+		String providerId
+	) {
 	}
 }
