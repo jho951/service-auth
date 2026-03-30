@@ -8,13 +8,18 @@
   - login
   - refresh rotation
   - logout
-  - access token authentication
+  - cookie/session + access token authentication
 - `app stack`
   - `mysql`
   - external `redis`
 - `modules`
   - `app`: 실행 모듈
   - `common`: 공통 설정/응답/로깅 모듈
+- Docker 네트워크 구조
+  - `SERVICE_SHARED_NETWORK`(external): gateway/auth/user-service 간 서비스 통신용 공유 네트워크
+    - 기본값: `msa-service-shared`
+  - `auth-private`(internal): auth-service와 auth-mysql 전용 private 네트워크
+  - `redis-core`(external): 중앙 Redis 네트워크
 
 ## 실행 가이드
 
@@ -83,10 +88,11 @@ export REDIS_SSL=false
 ## Database
 
 - 상세 DB 문서는 [docs/database.md](/Users/jhons/Downloads/BE/Auth-server/docs/database.md)를 참고하면 됩니다.
-- 현재 애플리케이션이 관리하는 주요 테이블은 `auth_accounts`, `auth_login_attempts`, `auth_social_accounts`, `mfa_factors` 입니다.
+- 현재 애플리케이션이 관리하는 주요 테이블은 `auth_accounts`, `auth_login_attempts`, `mfa_factors` 입니다.
 - 감사 로그 테이블 `auth_audit_logs` 는 제거되었고 현재 코드에서 사용하지 않습니다.
 - `dev` 프로필은 JPA `ddl-auto: create` 로 애플리케이션 시작 시 스키마를 생성합니다.
 - `prod` 프로필은 JPA `ddl-auto: none` 이므로 스키마를 사전에 준비해야 합니다.
+- 운영 DB 수동 마이그레이션 예시는 `db/migrations/2026-03-27_drop_auth_social_accounts.sql` 및 `scripts/db/apply-drop-auth-social-accounts-prod.sh`를 참고하면 됩니다.
 
 ## Notes
 
@@ -97,9 +103,11 @@ export REDIS_SSL=false
 - Docker 환경 값의 단일 소스는 루트 `.env.dev`/`.env.prod`입니다.
 - Redis는 이 레포에서 별도 컨테이너로 띄우지 않으며, 중앙 Redis endpoint를 환경변수로 주입받아 사용합니다.
 - 의존성 및 플러그인 버전은 `gradle/libs.versions.toml`에서 중앙 관리합니다.
+- 감사 로그는 `io.github.jho951:config:1.0.1`(`audit-log`)로 통일되며 기본 출력 파일은 `./logs/audit.log` 입니다.
 - SSO 시작 API는 `page=explain|editor|admin` 또는 각 페이지의 등록된 `redirect_uri`를 기준으로 동작합니다.
 - GitHub OAuth 적용은 `io.github.jho951 auth` `1.1.4`의 OAuth2 모델/SPI와 Spring Security OAuth2 Client를 사용하고, 성공 후에는 기존과 동일하게 일회용 `ticket`을 발급해 `/auth/exchange`로 세션을 만듭니다.
 - GitHub OAuth callback URI는 gateway 기준 `/v1/login/oauth2/code/github` 와 일치해야 합니다. 예시 dev 값은 `http://localhost:8080/v1/login/oauth2/code/github` 입니다.
+- 브라우저 클라이언트는 `credentials: 'include'` 와 쿠키만 사용하고, `Authorization` 은 비브라우저 fallback 입니다.
 - `admin` 페이지는 `ip-guard` 화이트리스트를 통과해야만 SSO 시작/교환/세션확인이 허용됩니다.
 - 로컬 개발(`dev`)에서는 `admin` SSO의 IP guard를 기본 비활성화합니다. 운영에서는 계속 활성화됩니다.
 - 로컬에서 IP guard를 수동 활성화해야 한다면 `127.0.0.1`, `::1`, `192.168.65.1`, `172.17.0.1`, `172.16.0.0/12` 같은 Docker host gateway/bridge 대역을 허용 목록에 포함해야 합니다.

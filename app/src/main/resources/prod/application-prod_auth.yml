@@ -7,7 +7,7 @@ auth:
   refresh-cookie-http-only: true
   refresh-cookie-secure: ${AUTH_REFRESH_COOKIE_SECURE:true}
   refresh-cookie-path: /
-  refresh-cookie-same-site: Lax
+  refresh-cookie-same-site: None
   auto-security: false
   oauth2:
     enabled: false
@@ -17,6 +17,9 @@ auth:
     secret: ${AUTH_JWT_SECRET:${JWT_ACCESS_TOKEN_SECRET:}}
     access-seconds: ${AUTH_ACCESS_EXPIRATION:${JWT_ACCESS_EXPIRATION:1200}}
     refresh-seconds: ${AUTH_REFRESH_EXPIRATION:${JWT_REFRESH_EXPIRATION:30000}}
+
+AUTH_ACCESS_COOKIE_SECURE: true
+AUTH_ACCESS_COOKIE_SAME_SITE: None
 
 spring:
   security:

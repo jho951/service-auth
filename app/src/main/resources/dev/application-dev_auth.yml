@@ -5,7 +5,7 @@ auth:
   refresh-cookie-enabled: true
   refresh-cookie-name: ${AUTH_REFRESH_COOKIE_NAME:${JWT_COOKIE_NAME:refresh_token}}
   refresh-cookie-http-only: true
-  refresh-cookie-secure: ${AUTH_REFRESH_COOKIE_SECURE:true}
+  refresh-cookie-secure: ${AUTH_REFRESH_COOKIE_SECURE:false}
   refresh-cookie-path: /
   refresh-cookie-same-site: Lax
   auto-security: false
@@ -17,6 +17,9 @@ auth:
     secret: ${AUTH_JWT_SECRET:${JWT_ACCESS_TOKEN_SECRET:local-dev-auth-secret-local-dev-auth-secret}}
     access-seconds: ${AUTH_ACCESS_EXPIRATION:${JWT_ACCESS_EXPIRATION:1200}}
     refresh-seconds: ${AUTH_REFRESH_EXPIRATION:${JWT_REFRESH_EXPIRATION:30000}}
+
+AUTH_ACCESS_COOKIE_SECURE: false
+AUTH_ACCESS_COOKIE_SAME_SITE: Lax
 
 spring:
   security:
