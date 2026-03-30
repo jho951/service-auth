@@ -46,7 +46,7 @@ volumes:
 networks:
   service-shared:
     external: true
-    name: msa-service-shared
+    name: ${SERVICE_SHARED_NETWORK:-service-backbone-shared}
   auth-private:
     driver: bridge
     internal: true
