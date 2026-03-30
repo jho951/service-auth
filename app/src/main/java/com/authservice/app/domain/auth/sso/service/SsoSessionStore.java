@@ -15,9 +15,11 @@ import org.springframework.stereotype.Component;
 public class SsoSessionStore {
 	private static final Logger log = LoggerFactory.getLogger(SsoSessionStore.class);
 
-	private static final String STATE_PREFIX = "oauth:state:";
-	private static final String TICKET_PREFIX = "sso:ticket:";
-	private static final String SESSION_PREFIX = "sso:session:";
+	private static final String STATE_PREFIX = "auth:oauth-state:";
+	private static final String LEGACY_STATE_PREFIX = "oauth:state:";
+	private static final String TICKET_PREFIX = "auth:ticket:";
+	private static final String SESSION_PREFIX = "auth:session:";
+	private static final String LEGACY_SESSION_PREFIX = "sso:session:";
 
 	private final RedisTemplate<String, Object> redisTemplate;
 
@@ -30,7 +32,7 @@ public class SsoSessionStore {
 	}
 
 	public Optional<SsoStatePayload> consumeState(String state) {
-		return consume(STATE_PREFIX + state, SsoStatePayload.class);
+		return consume(new String[] {STATE_PREFIX + state, LEGACY_STATE_PREFIX + state}, SsoStatePayload.class);
 	}
 
 	public void saveTicket(String ticket, SsoTicketPayload payload, Instant expiresAt) {
@@ -46,11 +48,12 @@ public class SsoSessionStore {
 	}
 
 	public Optional<SsoSessionPayload> findSession(String sessionId) {
-		return find(SESSION_PREFIX + sessionId, SsoSessionPayload.class);
+		return find(new String[] {SESSION_PREFIX + sessionId, LEGACY_SESSION_PREFIX + sessionId}, SsoSessionPayload.class);
 	}
 
 	public void revokeSession(String sessionId) {
 		delete(SESSION_PREFIX + sessionId);
+		delete(LEGACY_SESSION_PREFIX + sessionId);
 	}
 
 	private void save(String key, Object payload, Instant expiresAt) {
@@ -66,10 +69,22 @@ public class SsoSessionStore {
 		}
 	}
 
-	private <T> Optional<T> consume(String key, Class<T> type) {
-		Optional<T> value = find(key, type);
-		delete(key);
+	private <T> Optional<T> consume(String[] keys, Class<T> type) {
+		Optional<T> value = find(keys, type);
+		for (String key : keys) {
+			delete(key);
+		}
 		return value;
+	}
+
+	private <T> Optional<T> find(String[] keys, Class<T> type) {
+		for (String key : keys) {
+			Optional<T> value = find(key, type);
+			if (value.isPresent()) {
+				return value;
+			}
+		}
+		return Optional.empty();
 	}
 
 	private <T> Optional<T> find(String key, Class<T> type) {
