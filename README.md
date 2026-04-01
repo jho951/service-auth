@@ -16,6 +16,7 @@
   - refresh rotation
   - logout
   - cookie/session + access token authentication
+- 현재 구현은 외부 `auth` 모듈을 통해 인증 원천과 세션 발급 흐름을 구성한다.
 - `app stack`
   - `mysql`
   - external `redis`
