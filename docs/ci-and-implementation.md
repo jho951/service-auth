@@ -98,7 +98,7 @@ env:
 | workflow | 파일 | 실행 조건 | 주요 명령 |
 | --- | --- | --- | --- |
 | Java CI with Gradle | `.github/workflows/ci.yml` | `main` push/PR | `./gradlew build`, `./gradlew test` |
-| CodeQL | `.github/workflows/codeql.yml` | `main` push/PR, 주간 스케줄 | `./gradlew build -x test`, CodeQL analyze |
+| CodeQL | GitHub default setup | repository security setting | CodeQL analyze |
 
 CI 공통 기준:
 
@@ -107,7 +107,7 @@ CI 공통 기준:
 - package 권한: `packages: read`
 - source 권한: `contents: read`
 
-CodeQL은 `build-mode: manual`을 사용하므로 Gradle build가 성공해야 분석이 진행됩니다.
+CodeQL은 GitHub default setup을 사용합니다. Repository default setup과 advanced workflow를 동시에 켜면 SARIF 처리 충돌이 발생하므로 `.github/workflows/codeql.yml`을 별도로 두지 않습니다.
 
 ## 로컬 검증
 
