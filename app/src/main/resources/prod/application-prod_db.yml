@@ -20,5 +20,3 @@ spring:
         format_sql: false
         use_sql_comments: false
         default_batch_fetch_size: 100
-        type:
-          preferred_uuid_jdbc_type: CHAR

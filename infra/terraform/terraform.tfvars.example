@@ -1,0 +1,73 @@
+aws_region   = "ap-northeast-2"
+project_name = "msa"
+environment  = "prod"
+
+service_name         = "auth-server"
+service_runtime_name = "auth-service"
+service_role         = "app-service"
+
+vpc_cidr             = "10.20.0.0/16"
+public_subnet_cidrs  = ["10.20.1.0/24", "10.20.2.0/24"]
+private_subnet_cidrs = ["10.20.11.0/24", "10.20.12.0/24"]
+
+# Restrict this to public client CIDRs or an upstream edge/WAF CIDR.
+app_ingress_cidrs = ["203.0.113.10/32"]
+
+app_port      = 8081
+desired_count = 2
+task_cpu      = 512
+task_memory   = 1024
+
+health_check_path = "/actuator/health"
+
+image_tag = "latest"
+
+enable_mysql            = true
+mysql_database_name     = "authdb"
+mysql_username          = "authuser"
+mysql_password          = "replace-with-a-long-random-password"
+mysql_url_env_name      = "MYSQL_URL"
+mysql_username_env_name = "MYSQL_USER"
+mysql_password_env_name = "MYSQL_PASSWORD"
+mysql_jdbc_query        = "?useSSL=true&serverTimezone=UTC"
+
+app_env = {
+  REDIS_HOST = "replace-with-redis-endpoint"
+  REDIS_PORT = "6379"
+  REDIS_SSL  = "false"
+
+  AUTH_ACCESS_EXPIRATION                   = "1200"
+  AUTH_REFRESH_EXPIRATION                  = "30000"
+  AUTH_REFRESH_COOKIE_NAME                 = "refresh_token"
+  AUTH_REFRESH_COOKIE_SECURE               = "true"
+  SSO_SESSION_COOKIE_NAME                  = "sso_session"
+  SSO_SESSION_COOKIE_SECURE                = "true"
+  SSO_SESSION_COOKIE_SAME_SITE             = "None"
+  SSO_GITHUB_CLIENT_ID                     = "replace-with-github-oauth-client-id"
+  SSO_GITHUB_CALLBACK_URI                  = "https://auth.example.com/login/oauth2/code/github"
+  SSO_EXPLAIN_ORIGIN                       = "https://example.com"
+  SSO_EXPLAIN_CALLBACK_URI                 = "https://example.com/auth/callback"
+  SSO_EDITOR_ORIGIN                        = "https://editor.example.com"
+  SSO_EDITOR_CALLBACK_URI                  = "https://editor.example.com/auth/callback"
+  SSO_ADMIN_ORIGIN                         = "https://admin.example.com"
+  SSO_ADMIN_CALLBACK_URI                   = "https://admin.example.com/admin/auth/callback"
+  SSO_ADMIN_IP_GUARD_ENABLED               = "true"
+  SSO_ADMIN_IP_GUARD_DEFAULT_ALLOW         = "false"
+  PLATFORM_SECURITY_ADMIN_ALLOW_CIDRS      = "10.20.0.0/16"
+  PLATFORM_SECURITY_INTERNAL_ALLOW_CIDRS   = "10.20.0.0/16"
+  PLATFORM_GOVERNANCE_ENABLED              = "true"
+  PLATFORM_GOVERNANCE_AUDIT_ENABLED        = "true"
+  USER_SERVICE_BASE_URL                    = "https://user-service.example.com"
+  USER_SERVICE_JWT_ISSUER                  = "auth-service"
+  USER_SERVICE_JWT_AUDIENCE                = "user-service"
+  USER_SERVICE_JWT_SUBJECT                 = "auth-service"
+  USER_SERVICE_JWT_SCOPE                   = "internal"
+  USER_SERVICE_JWT_TTL_SECONDS             = "60"
+}
+
+app_secret_env = {
+  AUTH_JWT_SECRET          = "replace-with-a-long-random-jwt-secret"
+  SSO_GITHUB_CLIENT_SECRET = "replace-with-github-oauth-client-secret"
+  USER_SERVICE_JWT_SECRET  = "replace-with-user-service-shared-hmac-secret"
+  REDIS_PASSWORD           = ""
+}

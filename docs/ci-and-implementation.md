@@ -62,7 +62,7 @@ Repository는 `settings.gradle`의 `dependencyResolutionManagement`에서 중앙
 - GitHub Packages: `https://maven.pkg.github.com/jho951/platform-security`
 
 `platform-governance`와 `platform-security`는 private package이므로 인증값이 필요합니다.
-현재 기준 버전은 `platform-governance` `1.0.0`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
+현재 기준 버전은 `platform-governance` `1.1.0`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
 현재 기준 버전은 `platform-security` `1.0.4`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
 
 로컬 shell:
@@ -127,11 +127,11 @@ CodeQL은 GitHub default setup을 사용합니다. Repository default setup과 a
 로컬 실행:
 
 ```bash
-./scripts/run.local.sh dev
-./scripts/run.local.sh prod
+cp docs/examples/env.local.example .env.local
+./scripts/run.local.sh
 ```
 
-`run.local.sh`와 `run.docker.sh`는 루트 `.env.{env}` 파일을 요구합니다. Docker 실행 기준은 [docker.md](./docker.md)에 정리되어 있습니다.
+`run.local.sh`는 기본적으로 루트 `.env.local`을 읽고 Spring `dev` profile로 실행합니다. `run.docker.sh`는 환경별 루트 `.env.{env}` 파일을 요구합니다. Docker 실행 기준은 [docker.md](./docker.md)에 정리되어 있습니다.
 
 Docker image build는 Dockerfile 내부에서 아래를 실행합니다.
 
@@ -172,6 +172,6 @@ Docker 실행 기준은 [docker.md](./docker.md)를 따릅니다.
 2. 새 dependency는 `gradle/libs.versions.toml` 관리가 필요한지 확인합니다.
 3. private dependency가 추가되면 CI secret과 Docker build arg 영향도 확인합니다.
 4. public API 변경이면 `docs/openapi/auth-service.yml`을 같이 갱신합니다.
-5. DB 변경이면 migration SQL과 rollback 필요 여부를 확인합니다.
+5. DB 변경이면 `db/schema.sql` 변경인지 운영 migration이 필요한 변경인지 먼저 구분합니다.
 6. Docker runtime 값이 바뀌면 `.env.dev`, `.env.prod`, `docker/{dev,prod}/compose.yml`, [docker.md](./docker.md)를 같이 갱신합니다.
 7. 최소 `./gradlew test` 또는 변경 범위에 맞는 Gradle task를 실행합니다.

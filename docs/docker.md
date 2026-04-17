@@ -28,6 +28,8 @@
 Docker runtime 파일은 환경 단위로 관리합니다.
 
 ```text
+db
+└── schema.sql
 docker
 ├── Dockerfile
 ├── dev
@@ -50,21 +52,19 @@ docker
 
 `scripts/run.docker.sh`는 실행 환경에 맞는 루트 env 파일을 사용합니다.
 
-| 환경 | env 파일 |
-| --- | --- |
-| `dev` | `.env.dev` |
+| 환경     | env 파일      |
+|--------|-------------|
+| `dev`  | `.env.dev`  |
 | `prod` | `.env.prod` |
 
 env 파일이 없으면 실행을 중단합니다. 새 환경 파일은 `.env.example`을 기준으로 만듭니다.
 
 ## 서비스
 
-`auth-service`는 `auth-mysql` healthcheck가 성공한 뒤 시작됩니다.
-
-| 서비스 | 이미지 또는 빌드 | 네트워크 | 비고 |
-| --- | --- | --- | --- |
+| 서비스            | 이미지 또는 빌드                 | 네트워크                             | 비고                       |
+|----------------|---------------------------|----------------------------------|--------------------------|
 | `auth-service` | `docker/Dockerfile` build | `service-shared`, `auth-private` | Spring Boot auth-service |
-| `auth-mysql` | `mysql:8.0` | `auth-private` | auth-service 전용 MySQL |
+| `auth-mysql`   | `mysql:8.0`               | `auth-private`                   | auth-service 전용 MySQL    |
 
 ## 네트워크
 
@@ -115,6 +115,7 @@ networks:
 | --- | --- | --- |
 | `SERVICE_SHARED_NETWORK` | `service-backbone-shared` | external shared network 이름 |
 | `SERVER_PORT` | dev Compose 기준 `8081` | 컨테이너 내부 애플리케이션 포트 |
+| `AUTH_SERVICE_HOST_PORT` | `8082` | dev Compose에서 호스트에 노출하는 포트 |
 | `MYSQL_HOST` | env 파일 값 | MySQL 호스트명. Docker에서는 보통 `auth-mysql` |
 | `MYSQL_DB` | env 파일 값 | MySQL 데이터베이스 이름 |
 | `MYSQL_USER` | env 파일 값 | MySQL 애플리케이션 사용자 |
@@ -129,6 +130,12 @@ networks:
 
 `AUTH_ENV_FILE`은 스크립트가 Compose에 넘기는 내부 변수입니다. 직접 실행할 때만 override합니다.
 
+dev Compose는 기본적으로 `localhost:8082`를 auth-service 컨테이너의 `SERVER_PORT`에 연결합니다.
+
+```text
+http://localhost:8082/swagger-ui.html
+```
+
 ## 볼륨과 설정
 
 MySQL data volume:
@@ -139,10 +146,27 @@ auth-mysql-volume
 
 MySQL config/init 파일:
 
-| 환경 | `my.cnf` | `init.sql` |
-| --- | --- | --- |
-| `dev` | `docker/dev/services/mysql/my.cnf` | `docker/dev/services/mysql/init.sql` |
-| `prod` | `docker/prod/services/mysql/my.cnf` | `docker/prod/services/mysql/init.sql` |
+| 환경 | `my.cnf` | bootstrap SQL | schema SQL |
+| --- | --- | --- | --- |
+| `dev` | `docker/dev/services/mysql/my.cnf` | `docker/dev/services/mysql/init.sql` | `db/schema.sql` |
+| `prod` | `docker/prod/services/mysql/my.cnf` | `docker/prod/services/mysql/init.sql` | `db/schema.sql` |
+
+역할 분리:
+
+```text
+docker/{dev,prod}/services/mysql/init.sql
+  DB 생성
+  사용자/권한 생성
+  USE <database>
+  SOURCE /schema/auth-schema.sql
+
+db/schema.sql
+  auth_accounts
+  auth_login_attempts
+  mfa_factors
+```
+
+Compose는 repo 루트의 `db/schema.sql`을 MySQL 컨테이너의 `/schema/auth-schema.sql`로 read-only mount합니다. 테이블 DDL은 `db/schema.sql`만 수정하고, Docker init SQL에 복사하지 않습니다.
 
 `dev down`은 `--remove-orphans -v`를 사용하므로 named volume도 삭제됩니다.
 
@@ -198,7 +222,7 @@ DB healthcheck가 실패하면 먼저 `.env.dev` 또는 `.env.prod`의 MySQL 값
 
 - 새 서비스가 auth DB에 직접 접근해야 한다면 먼저 구조를 재검토합니다. 기본 정책은 auth DB direct access 금지입니다.
 - Compose 파일은 `docker/dev/compose.yml`, `docker/prod/compose.yml`을 기준으로 변경합니다.
+- auth 테이블 schema는 `db/schema.sql`만 수정합니다. Docker `init.sql`에는 테이블 DDL을 중복 작성하지 않습니다.
 - `.env.dev`/`.env.prod` 기본값을 바꾸면 `docker/{dev,prod}/compose.yml`과 이 문서를 같이 확인합니다.
 - 공유 네트워크 이름을 바꾸면 gateway, user-service, 중앙 Redis Compose 설정도 함께 맞춰야 합니다.
 - Redis는 이 레포에서 띄우지 않습니다. shared network에 이미 연결된 중앙 Redis endpoint를 환경변수로 주입합니다.
-- DB schema 변경은 Docker init SQL보다 `db/migrations`와 [database.md](./database.md)를 우선합니다.

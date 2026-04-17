@@ -216,6 +216,9 @@ public class SsoAuthService {
 
 	public URI completeOAuthLogin(SsoPrincipal principal, HttpServletRequest request) {
 		SsoStatePayload statePayload = consumeOAuthState(request);
+		if (SsoPageType.from(statePayload.getPageType()) == SsoPageType.ADMIN) {
+			adminIpGuardService.validate(request);
+		}
 
 		String ticket = UUID.randomUUID().toString();
 		Instant expiresAt = Instant.now().plusSeconds(properties.getTicketTtlSeconds());

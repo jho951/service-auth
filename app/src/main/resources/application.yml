@@ -72,6 +72,18 @@ platform:
       cache-ttl-millis: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_CACHE_TTL_MILLIS:3000}
     engine:
       strict: ${PLATFORM_GOVERNANCE_ENGINE_STRICT:false}
+    violation:
+      action: ${PLATFORM_GOVERNANCE_VIOLATION_ACTION:DENY}
+      handler-failure-fatal: ${PLATFORM_GOVERNANCE_VIOLATION_HANDLER_FAILURE_FATAL:false}
+    operational:
+      fail-fast-enabled: ${PLATFORM_GOVERNANCE_OPERATIONAL_FAIL_FAST_ENABLED:true}
+      production-profiles: ${PLATFORM_GOVERNANCE_OPERATIONAL_PRODUCTION_PROFILES:prod}
+      allow-audit-disabled-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_AUDIT_DISABLED_IN_PRODUCTION:false}
+      allow-non-strict-engine-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_NON_STRICT_ENGINE_IN_PRODUCTION:false}
+      allow-permissive-violation-action-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_PERMISSIVE_VIOLATION_ACTION_IN_PRODUCTION:false}
+      require-audit-sink-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_AUDIT_SINK_IN_PRODUCTION:true}
+      require-policy-config-in-enforcing-mode: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_POLICY_CONFIG_IN_ENFORCING_MODE:true}
+      require-fatal-handler-failures-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_FATAL_HANDLER_FAILURES_IN_PRODUCTION:true}
   security:
     enabled: true
     boundary:
@@ -80,7 +92,8 @@ platform:
         - /.well-known/**
         - /error
         - /health
-        - /actuator/**
+        - /actuator/health
+        - /actuator/health/**
         - /favicon.ico
         - /auth/login
         - /auth/refresh
@@ -107,18 +120,14 @@ platform:
       allow-session-for-browser: true
       allow-bearer-for-api: true
       internal-token-enabled: true
-      access-token-cookie-name: ${AUTH_ACCESS_COOKIE_NAME:ACCESS_TOKEN}
-      session-cookie-name: ${SSO_SESSION_COOKIE_NAME:sso_session}
-      jwt-secret: ${AUTH_JWT_SECRET:}
+      jwt-secret: ${AUTH_JWT_SECRET}
       access-token-ttl: PT20M
       refresh-token-ttl: PT30000S
     ip-guard:
       enabled: true
       trust-proxy: true
-      admin-allow-cidrs:
-        - ${PLATFORM_SECURITY_ADMIN_ALLOW_CIDR:10.0.0.0/8}
-      internal-allow-cidrs:
-        - ${PLATFORM_SECURITY_INTERNAL_ALLOW_CIDR:172.16.0.0/12}
+      admin-allow-cidrs: ${PLATFORM_SECURITY_ADMIN_ALLOW_CIDRS:${PLATFORM_SECURITY_ADMIN_ALLOW_CIDR:10.0.0.0/8}}
+      internal-allow-cidrs: ${PLATFORM_SECURITY_INTERNAL_ALLOW_CIDRS:${PLATFORM_SECURITY_INTERNAL_ALLOW_CIDR:172.16.0.0/12}}
     rate-limit:
       enabled: true
       anonymous:
@@ -130,3 +139,18 @@ platform:
       internal:
         requests: 1000
         window-seconds: 60
+      routes:
+        - name: auth-login
+          patterns:
+            - /auth/login
+            - /auth/login/github
+            - /auth/oauth2/authorize/github
+            - /auth/sso/start
+          requests: ${PLATFORM_SECURITY_RATE_LIMIT_AUTH_LOGIN_REQUESTS:10}
+          window-seconds: ${PLATFORM_SECURITY_RATE_LIMIT_AUTH_LOGIN_WINDOW_SECONDS:60}
+        - name: auth-refresh
+          patterns:
+            - /auth/refresh
+            - /auth/exchange
+          requests: ${PLATFORM_SECURITY_RATE_LIMIT_AUTH_REFRESH_REQUESTS:20}
+          window-seconds: ${PLATFORM_SECURITY_RATE_LIMIT_AUTH_REFRESH_WINDOW_SECONDS:60}

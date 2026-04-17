@@ -1,36 +1,35 @@
 package com.authservice.app.domain.auth.entity;
 
+import com.authservice.app.common.base.entity.BaseEntity;
+import com.authservice.app.domain.auth.support.Uuid32;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "auth_accounts")
+@AttributeOverride(name = "modifiedDate", column = @Column(name = "updated_at", nullable = false))
 @Getter
 @NoArgsConstructor
-public class Auth {
+public class Auth extends BaseEntity {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.UUID)
-	@Column(name = "id", nullable = false, updatable = false, columnDefinition = "char(36)")
-	@JdbcTypeCode(SqlTypes.CHAR)
-	private UUID id;
+	@Getter(AccessLevel.NONE)
+	@Column(name = "id", nullable = false, updatable = false, length = 32, columnDefinition = "char(32)")
+	private String id;
 
-	@Column(name = "user_id", nullable = false, unique = true, columnDefinition = "char(36)")
-	@JdbcTypeCode(SqlTypes.CHAR)
-	private UUID userId;
+	@Getter(AccessLevel.NONE)
+	@Column(name = "user_id", nullable = false, unique = true, length = 32, columnDefinition = "char(32)")
+	private String userId;
 
 	@Column(name = "login_id", nullable = false, unique = true)
 	private String loginId;
@@ -50,23 +49,22 @@ public class Auth {
 	@Column(name = "last_login_at")
 	private LocalDateTime lastLoginAt;
 
-	@Column(name = "created_at", nullable = false, updatable = false)
-	private LocalDateTime createdAt;
-
-	@Column(name = "updated_at", nullable = false)
-	private LocalDateTime updatedAt;
-
 	@Builder
 	private Auth(UUID userId, String loginId, String passwordHash) {
-		this.userId = userId;
+		this.userId = Uuid32.fromUuid(userId);
 		this.loginId = loginId;
 		this.passwordHash = passwordHash;
 		this.accountLocked = false;
 		this.failedLoginCount = 0;
-		LocalDateTime now = LocalDateTime.now();
-		this.passwordUpdatedAt = now;
-		this.createdAt = now;
-		this.updatedAt = now;
+		this.passwordUpdatedAt = LocalDateTime.now();
+	}
+
+	public UUID getId() {
+		return Uuid32.toUuid(id);
+	}
+
+	public UUID getUserId() {
+		return Uuid32.toUuid(userId);
 	}
 
 	public String getUsername() {
@@ -89,16 +87,11 @@ public class Auth {
 
 	@PrePersist
 	void onCreate() {
-		LocalDateTime now = LocalDateTime.now();
-		if (passwordUpdatedAt == null) {
-			passwordUpdatedAt = now;
+		if (id == null) {
+			id = Uuid32.generate();
 		}
-		createdAt = now;
-		updatedAt = now;
-	}
-
-	@PreUpdate
-	void onUpdate() {
-		updatedAt = LocalDateTime.now();
+		if (passwordUpdatedAt == null) {
+			passwordUpdatedAt = LocalDateTime.now();
+		}
 	}
 }

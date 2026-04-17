@@ -6,8 +6,8 @@ import com.authservice.app.domain.auth.sso.service.SsoOAuth2SuccessHandler;
 import jakarta.servlet.Filter;
 import java.util.ArrayList;
 import java.util.List;
-import io.github.jho951.platform.security.web.PlatformSecurityServletFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -32,7 +32,7 @@ public class SecurityConfig {
 	private final SsoProperties ssoProperties;
 	private final SsoOAuth2SuccessHandler ssoOAuth2SuccessHandler;
 	private final SsoOAuth2FailureHandler ssoOAuth2FailureHandler;
-	private final PlatformSecurityServletFilter platformSecurityServletFilter;
+	private final Filter platformSecurityServletFilter;
 	private final Environment environment;
 
 	public SecurityConfig(
@@ -41,7 +41,7 @@ public class SecurityConfig {
 		SsoProperties ssoProperties,
 		SsoOAuth2SuccessHandler ssoOAuth2SuccessHandler,
 		SsoOAuth2FailureHandler ssoOAuth2FailureHandler,
-		PlatformSecurityServletFilter platformSecurityServletFilter,
+		@Qualifier("securityServletFilter") Filter platformSecurityServletFilter,
 		Environment environment) {
 		this.entryPoint = entryPoint;
 		this.denied = denied;
@@ -111,7 +111,8 @@ public class SecurityConfig {
 			"/auth/internal/session/validate",
 			"/oauth2/**",
 			"/login/oauth2/**",
-			"/actuator/**",
+			"/actuator/health",
+			"/actuator/health/**",
 			"/favicon.ico"
 		));
 
@@ -128,7 +129,7 @@ public class SecurityConfig {
 
 	@Bean
 	public FilterRegistrationBean<Filter> platformSecurityServletFilterRegistration(
-		PlatformSecurityServletFilter platformSecurityServletFilter
+		@Qualifier("securityServletFilter") Filter platformSecurityServletFilter
 	) {
 		FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>(platformSecurityServletFilter);
 		registration.setEnabled(false);

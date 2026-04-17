@@ -8,3 +8,6 @@ SET GLOBAL slow_query_log = 'ON';
 SET GLOBAL slow_query_log_file = '/var/log/mysql/slow.log';
 
 USE prod_db;
+
+-- 테이블 schema는 repo 공통 baseline을 단일 source로 사용
+SOURCE /schema/auth-schema.sql;

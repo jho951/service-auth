@@ -30,6 +30,10 @@ services:
       - type: bind
         source: ./services/mysql/init.sql
         target: /docker-entrypoint-initdb.d/init.sql
+      - type: bind
+        source: ../../db/schema.sql
+        target: /schema/auth-schema.sql
+        read_only: true
     healthcheck:
       test:
         - CMD-SHELL

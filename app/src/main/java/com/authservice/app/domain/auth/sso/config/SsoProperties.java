@@ -189,6 +189,7 @@ public class SsoProperties {
 		private boolean enabled = true;
 		private boolean defaultAllow;
 		private String rules = "";
+		private String rulesFile = "";
 
 		public boolean isEnabled() {
 			return enabled;
@@ -212,6 +213,14 @@ public class SsoProperties {
 
 		public void setRules(String rules) {
 			this.rules = rules;
+		}
+
+		public String getRulesFile() {
+			return rulesFile;
+		}
+
+		public void setRulesFile(String rulesFile) {
+			this.rulesFile = rulesFile;
 		}
 
 		public List<String> parseRules() {

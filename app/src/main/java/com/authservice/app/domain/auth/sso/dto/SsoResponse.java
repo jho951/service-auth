@@ -1,10 +1,11 @@
 package com.authservice.app.domain.auth.sso.dto;
 
+import com.authservice.app.common.base.dto.BaseResponse;
 import java.util.List;
 
 public class SsoResponse {
 
-	public static class InternalSessionValidationResponse {
+	public static class InternalSessionValidationResponse extends BaseResponse {
 		private final boolean authenticated;
 		private final String userId;
 		private final String role;
@@ -40,7 +41,7 @@ public class SsoResponse {
 		}
 	}
 
-	public static class MeResponse {
+	public static class MeResponse extends BaseResponse {
 		private final String id;
 		private final String email;
 		private final String name;

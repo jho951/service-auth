@@ -12,6 +12,8 @@ services:
       - ${AUTH_ENV_FILE:-../../.env.dev}
     environment:
       SERVER_PORT: ${SERVER_PORT:-8081}
+    ports:
+      - "${AUTH_SERVICE_HOST_PORT:-8082}:${SERVER_PORT:-8081}"
     command: ["--spring.profiles.active=dev"]
     depends_on:
       auth-mysql:
@@ -32,6 +34,10 @@ services:
       - type: bind
         source: ./services/mysql/init.sql
         target: /docker-entrypoint-initdb.d/init.sql
+      - type: bind
+        source: ../../db/schema.sql
+        target: /schema/auth-schema.sql
+        read_only: true
     healthcheck:
       test:
         - CMD-SHELL

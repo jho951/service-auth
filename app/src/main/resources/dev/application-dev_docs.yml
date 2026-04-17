@@ -13,7 +13,8 @@ platform:
         - /.well-known/**
         - /error
         - /health
-        - /actuator/**
+        - /actuator/health
+        - /actuator/health/**
         - /v3/api-docs/**
         - /swagger-ui/**
         - /swagger-ui.html

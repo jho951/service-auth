@@ -1,8 +1,8 @@
 package com.authservice.app.domain.auth.controller;
 
+import com.authservice.app.common.logging.SensitiveDataMasker;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
-import com.authservice.app.domain.auth.entity.Auth;
 import com.authservice.app.domain.audit.service.AuthAuditLogService;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
 import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
@@ -14,7 +14,6 @@ import com.authservice.app.domain.auth.support.RefreshCookieWriter;
 import com.authservice.app.domain.auth.support.RefreshTokenExtractor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -80,7 +79,7 @@ public class AuthGatewayController {
 		AuthRequestContext context = AuthRequestContext.from(request);
 		try {
 			AuthTokens tokens = authService.login(req.getUsername(), req.getPassword());
-			Optional<Auth> auth = authAccountPolicyService.markLoginSuccess(req.getUsername());
+			authAccountPolicyService.markLoginSuccess(req.getUsername());
 			authLoginAttemptService.record(req.getUsername(), context, "SUCCESS");
 			authAuditLogService.logPasswordLoginSuccess(req.getUsername());
 
@@ -93,14 +92,13 @@ public class AuthGatewayController {
 				.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.accessToken()))
 				.body(new AuthResponse.TokenResponse(tokens.accessToken(), tokens.refreshToken()));
 		} catch (RuntimeException ex) {
-			Optional<Auth> auth = authAccountPolicyService.markLoginFailure(req.getUsername());
+			authAccountPolicyService.markLoginFailure(req.getUsername());
 			authLoginAttemptService.record(req.getUsername(), context, "FAILURE");
-			log.warn("Login failed. method=POST uri=/auth/login username={} ip={} userAgent={} exceptionType={} message={}",
-				req.getUsername(),
+			log.warn("event=auth_login_request_failed username={} ip={} user_agent={} exception_type={}",
+				SensitiveDataMasker.maskIdentifier(req.getUsername()),
 				context.ip(),
 				context.userAgent(),
-				ex.getClass().getSimpleName(),
-				ex.getMessage());
+				ex.getClass().getSimpleName());
 			authAuditLogService.logPasswordLoginFailure(req.getUsername(), "INVALID_CREDENTIALS_OR_POLICY");
 			throw ex;
 		}

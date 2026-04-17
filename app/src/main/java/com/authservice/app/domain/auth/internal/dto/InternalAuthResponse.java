@@ -1,5 +1,6 @@
 package com.authservice.app.domain.auth.internal.dto;
 
+import com.authservice.app.common.base.dto.BaseResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -13,7 +14,7 @@ public class InternalAuthResponse {
 	@Builder
 	@NoArgsConstructor
 	@AllArgsConstructor
-	public static class AccountResponse {
+	public static class AccountResponse extends BaseResponse {
 		@Schema(description = "생성된 auth account id")
 		private UUID authId;
 

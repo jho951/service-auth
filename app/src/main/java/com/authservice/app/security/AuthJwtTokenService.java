@@ -18,10 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * auth-service의 JWT 발급 구현체입니다.
- * access token에는 issuer를 명시적으로 넣어 downstream이 발급 주체를 판별할 수 있게 합니다.
- */
+/** auth-service의 JWT 발급 구현체입니다. */
 public class AuthJwtTokenService {
 
 	private static final String KEY_ISSUER = "iss";
@@ -137,14 +134,12 @@ public class AuthJwtTokenService {
 	}
 
 	private List<String> toAuthorities(Object value) {
+		if (value instanceof String string) return List.of(string);
 		if (value instanceof List<?> list) {
 			return list.stream()
 				.filter(String.class::isInstance)
 				.map(String.class::cast)
 				.toList();
-		}
-		if (value instanceof String string) {
-			return List.of(string);
 		}
 		return List.of();
 	}
