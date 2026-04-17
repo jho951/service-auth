@@ -1,0 +1,56 @@
+name: auth-service
+
+services:
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      args:
+        GITHUB_ACTOR: ${GITHUB_ACTOR:-}
+        GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    env_file:
+      - ${AUTH_ENV_FILE:-../../.env.prod}
+    command: ["--spring.profiles.active=prod"]
+    depends_on:
+      auth-mysql:
+        condition: service_healthy
+    networks:
+      - service-shared
+      - auth-private
+
+  auth-mysql:
+    image: mysql:8.0
+    env_file:
+      - ${AUTH_ENV_FILE:-../../.env.prod}
+    volumes:
+      - auth-mysql-volume:/var/lib/mysql
+      - type: bind
+        source: ./services/mysql/my.cnf
+        target: /etc/mysql/my.cnf
+      - type: bind
+        source: ./services/mysql/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+      - type: bind
+        source: ../../db/schema.sql
+        target: /schema/auth-schema.sql
+        read_only: true
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h "$$MYSQL_HOST" -u "$$MYSQL_USER" -p"$$MYSQL_PASSWORD"
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-private
+
+volumes:
+  auth-mysql-volume:
+
+networks:
+  service-shared:
+    external: true
+    name: ${SERVICE_SHARED_NETWORK:-service-backbone-shared}
+  auth-private:
+    driver: bridge
+    internal: true

@@ -3,10 +3,15 @@ package com.authservice.app.security;
 import com.authservice.app.domain.auth.sso.config.SsoProperties;
 import com.authservice.app.domain.auth.sso.service.SsoOAuth2FailureHandler;
 import com.authservice.app.domain.auth.sso.service.SsoOAuth2SuccessHandler;
-import com.auth.config.security.AuthOncePerRequestFilter;
+import jakarta.servlet.Filter;
+import java.util.ArrayList;
 import java.util.List;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,27 +27,29 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-	private final AuthOncePerRequestFilter authFilter;
 	private final RestAuthHandlers.EntryPoint entryPoint;
 	private final RestAuthHandlers.Denied denied;
 	private final SsoProperties ssoProperties;
 	private final SsoOAuth2SuccessHandler ssoOAuth2SuccessHandler;
 	private final SsoOAuth2FailureHandler ssoOAuth2FailureHandler;
-	private final AccessTokenCookieAuthFilter accessTokenCookieAuthFilter;
+	private final Filter platformSecurityServletFilter;
+	private final Environment environment;
 
-	public SecurityConfig(AuthOncePerRequestFilter authFilter,
-		RestAuthHandlers.EntryPoint entryPoint, RestAuthHandlers.Denied denied,
+	public SecurityConfig(
+		RestAuthHandlers.EntryPoint entryPoint,
+		RestAuthHandlers.Denied denied,
 		SsoProperties ssoProperties,
 		SsoOAuth2SuccessHandler ssoOAuth2SuccessHandler,
 		SsoOAuth2FailureHandler ssoOAuth2FailureHandler,
-		AccessTokenCookieAuthFilter accessTokenCookieAuthFilter) {
-		this.authFilter = authFilter;
+		@Qualifier("securityServletFilter") Filter platformSecurityServletFilter,
+		Environment environment) {
 		this.entryPoint = entryPoint;
 		this.denied = denied;
 		this.ssoProperties = ssoProperties;
 		this.ssoOAuth2SuccessHandler = ssoOAuth2SuccessHandler;
 		this.ssoOAuth2FailureHandler = ssoOAuth2FailureHandler;
-		this.accessTokenCookieAuthFilter = accessTokenCookieAuthFilter;
+		this.platformSecurityServletFilter = platformSecurityServletFilter;
+		this.environment = environment;
 	}
 
 	@Bean
@@ -55,55 +62,16 @@ public class SecurityConfig {
 				new AntPathRequestMatcher("/auth/refresh", HttpMethod.POST.name()),
 				new AntPathRequestMatcher("/auth/logout", HttpMethod.POST.name()),
 				new AntPathRequestMatcher("/auth/internal/session/validate", HttpMethod.POST.name()),
-				new AntPathRequestMatcher("/v1/auth/login", HttpMethod.POST.name()),
-				new AntPathRequestMatcher("/v1/auth/refresh", HttpMethod.POST.name()),
-				new AntPathRequestMatcher("/v1/auth/logout", HttpMethod.POST.name()),
-				new AntPathRequestMatcher("/v1/auth/internal/session/validate", HttpMethod.POST.name()),
 				new AntPathRequestMatcher("/auth/exchange", HttpMethod.POST.name())
 			))
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 			.exceptionHandling(e -> e.authenticationEntryPoint(entryPoint).accessDeniedHandler(denied))
-				.authorizeHttpRequests(auth -> auth
-					.requestMatchers(
-						"/auth/session",
-						"/v1/auth/session"
-					).authenticated()
-					.requestMatchers(
-					"/",
-					"/v1",
-					"/.well-known/**",
-					"/v1/.well-known/**",
-					"/error",
-					"/internal/auth/**",
-					"/auth/login",
-					"/v1/auth/login",
-					"/auth/refresh",
-					"/v1/auth/refresh",
-					"/auth/logout",
-					"/v1/auth/logout",
-						"/auth/sso/start",
-						"/v1/auth/sso/start",
-						"/auth/oauth/github/callback",
-						"/v1/auth/oauth/github/callback",
-						"/auth/login/github",
-						"/v1/auth/login/github",
-						"/auth/oauth2/authorize/**",
-						"/v1/auth/oauth2/authorize/**",
-						"/auth/exchange",
-						"/v1/auth/exchange",
-						"/auth/me",
-						"/v1/auth/me",
-						"/auth/internal/session/validate",
-						"/v1/auth/internal/session/validate",
-					"/oauth2/**",
-					"/v1/oauth2/**",
-					"/login/oauth2/**",
-					"/v1/login/oauth2/**",
-					"/actuator/**",
-					"/v3/api-docs/**",
-					"/swagger-ui/**",
-					"/swagger-ui.html",
-					"/favicon.ico"
+			.authorizeHttpRequests(auth -> auth
+				.requestMatchers(
+					"/auth/session"
+				).authenticated()
+				.requestMatchers(
+					publicRequestMatchers()
 				).permitAll()
 				.anyRequest().authenticated()
 			)
@@ -120,10 +88,52 @@ public class SecurityConfig {
 				.successHandler(ssoOAuth2SuccessHandler)
 				.failureHandler(ssoOAuth2FailureHandler)
 			)
-			.addFilterBefore(accessTokenCookieAuthFilter, UsernamePasswordAuthenticationFilter.class)
-			.addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
+			.addFilterBefore(platformSecurityServletFilter, UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
+	}
+
+	private String[] publicRequestMatchers() {
+		List<String> matchers = new ArrayList<>(List.of(
+			"/",
+			"/.well-known/**",
+			"/error",
+			"/internal/auth/**",
+			"/auth/login",
+			"/auth/refresh",
+			"/auth/logout",
+			"/auth/sso/start",
+			"/auth/oauth/github/callback",
+			"/auth/login/github",
+			"/auth/oauth2/authorize/github",
+			"/auth/exchange",
+			"/auth/me",
+			"/auth/internal/session/validate",
+			"/oauth2/**",
+			"/login/oauth2/**",
+			"/actuator/health",
+			"/actuator/health/**",
+			"/favicon.ico"
+		));
+
+		if (environment.acceptsProfiles(Profiles.of("dev", "dev_docs"))) {
+			matchers.addAll(List.of(
+				"/v3/api-docs/**",
+				"/swagger-ui/**",
+				"/swagger-ui.html"
+			));
+		}
+
+		return matchers.toArray(String[]::new);
+	}
+
+	@Bean
+	public FilterRegistrationBean<Filter> platformSecurityServletFilterRegistration(
+		@Qualifier("securityServletFilter") Filter platformSecurityServletFilter
+	) {
+		FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>(platformSecurityServletFilter);
+		registration.setEnabled(false);
+		return registration;
 	}
 
 	@Bean

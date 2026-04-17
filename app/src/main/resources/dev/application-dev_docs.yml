@@ -4,3 +4,28 @@ springdoc:
     try-it-out-enabled: true
     operations-sorter: alpha
     doc-expansion: none
+
+platform:
+  security:
+    boundary:
+      public-paths:
+        - /
+        - /.well-known/**
+        - /error
+        - /health
+        - /actuator/health
+        - /actuator/health/**
+        - /v3/api-docs/**
+        - /swagger-ui/**
+        - /swagger-ui.html
+        - /favicon.ico
+        - /auth/login
+        - /auth/refresh
+        - /auth/logout
+        - /auth/sso/start
+        - /auth/oauth/github/callback
+        - /auth/login/github
+        - /auth/oauth2/authorize/github
+        - /auth/exchange
+        - /oauth2/**
+        - /login/oauth2/**

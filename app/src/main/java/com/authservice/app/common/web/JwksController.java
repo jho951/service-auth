@@ -19,34 +19,6 @@ public class JwksController {
 	private final String authJwtAlgorithm;
 	private final String authJwtKeyId;
 
-	public JwksController(
-		@Value("${AUTH_JWT_PUBLIC_KEY_PEM:}") String authJwtPublicKeyPem,
-		@Value("${AUTH_JWT_ALGORITHM:RS256}") String authJwtAlgorithm,
-		@Value("${AUTH_JWT_KEY_ID:auth-jwt-key}") String authJwtKeyId
-	) {
-		this.authJwtPublicKeyPem = authJwtPublicKeyPem;
-		this.authJwtAlgorithm = authJwtAlgorithm;
-		this.authJwtKeyId = authJwtKeyId;
-	}
-
-	@GetMapping("/.well-known/jwks.json")
-	public ResponseEntity<Map<String, Object>> jwks() {
-		if (!isRsaAlgorithm(authJwtAlgorithm) || authJwtPublicKeyPem == null || authJwtPublicKeyPem.isBlank()) {
-			return ResponseEntity.ok(Map.of("keys", List.of()));
-		}
-
-		RSAPublicKey rsaPublicKey = parseRsaPublicKey(authJwtPublicKeyPem);
-		Map<String, String> jwk = Map.of(
-			"kty", "RSA",
-			"use", "sig",
-			"alg", authJwtAlgorithm,
-			"kid", authJwtKeyId,
-			"n", toBase64UrlUnsigned(rsaPublicKey.getModulus()),
-			"e", toBase64UrlUnsigned(rsaPublicKey.getPublicExponent())
-		);
-		return ResponseEntity.ok(Map.of("keys", List.of(jwk)));
-	}
-
 	private static boolean isRsaAlgorithm(String algorithm) {
 		return algorithm != null && algorithm.toUpperCase().startsWith("RS");
 	}
@@ -73,6 +45,36 @@ public class JwksController {
 			bytes = unsigned;
 		}
 		return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+	}
+
+	public JwksController(
+		@Value("${AUTH_JWT_PUBLIC_KEY_PEM:}")
+		String authJwtPublicKeyPem,
+		@Value("${AUTH_JWT_ALGORITHM:RS256}")
+		String authJwtAlgorithm,
+		@Value("${AUTH_JWT_KEY_ID:auth-jwt-key}")
+		String authJwtKeyId
+	) {
+		this.authJwtPublicKeyPem = authJwtPublicKeyPem;
+		this.authJwtAlgorithm = authJwtAlgorithm;
+		this.authJwtKeyId = authJwtKeyId;
+	}
+
+	@GetMapping("/.well-known/jwks.json")
+	public ResponseEntity<Map<String, Object>> jwks() {
+		if (!isRsaAlgorithm(authJwtAlgorithm)) return ResponseEntity.ok(Map.of("keys", List.of()));
+		if (authJwtPublicKeyPem == null ) return ResponseEntity.ok(Map.of("keys", List.of()));
+		if (authJwtPublicKeyPem.isBlank()) return ResponseEntity.ok(Map.of("keys", List.of()));
+		RSAPublicKey rsaPublicKey = parseRsaPublicKey(authJwtPublicKeyPem);
+		Map<String, String> jwk = Map.of(
+			"kty", "RSA",
+			"use", "sig",
+			"alg", authJwtAlgorithm,
+			"kid", authJwtKeyId,
+			"n", toBase64UrlUnsigned(rsaPublicKey.getModulus()),
+			"e", toBase64UrlUnsigned(rsaPublicKey.getPublicExponent())
+		);
+		return ResponseEntity.ok(Map.of("keys", List.of(jwk)));
 	}
 }
 

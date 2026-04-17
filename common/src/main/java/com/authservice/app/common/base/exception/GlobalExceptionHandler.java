@@ -1,6 +1,5 @@
 package com.authservice.app.common.base.exception;
 
-import com.auth.api.exception.AuthException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,28 +23,11 @@ public class GlobalExceptionHandler {
 			.body(GlobalResponse.fail(errorCode));
 	}
 
-	@ExceptionHandler(AuthException.class)
-	public ResponseEntity<GlobalResponse<Void>> handleAuthException(AuthException ex, HttpServletRequest request) {
-		ErrorCode errorCode = mapAuthError(ex);
-		logWithRequest(request, errorCode, ex.getClass().getSimpleName(), ex.getMessage());
-		return ResponseEntity.status(errorCode.getHttpStatus())
-			.body(GlobalResponse.fail(errorCode));
-	}
-
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<GlobalResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
 		logWithRequest(request, ErrorCode.INVALID_REQUEST, ex.getClass().getSimpleName(), ex.getMessage());
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 			.body(GlobalResponse.fail(ErrorCode.INVALID_REQUEST));
-	}
-
-	private ErrorCode mapAuthError(AuthException ex) {
-		return switch (ex.getReason()) {
-			case INVALID_CREDENTIALS, USER_NOT_FOUND -> ErrorCode.UNAUTHORIZED;
-			case INVALID_TOKEN, REVOKED_TOKEN -> ErrorCode.INVALID_TOKEN;
-			case INVALID_INPUT -> ErrorCode.INVALID_REQUEST;
-			default -> ErrorCode.FAIL;
-		};
 	}
 
 	private void logWithRequest(HttpServletRequest request, ErrorCode errorCode, String exceptionType, String exceptionMessage) {

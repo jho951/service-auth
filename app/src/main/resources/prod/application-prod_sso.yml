@@ -19,6 +19,7 @@ sso:
         enabled: ${SSO_ADMIN_IP_GUARD_ENABLED:true}
         default-allow: ${SSO_ADMIN_IP_GUARD_DEFAULT_ALLOW:false}
         rules: ${SSO_ADMIN_IP_RULES:}
+        rules-file: ${SSO_ADMIN_IP_RULES_FILE:}
   session:
     cookie-name: ${SSO_SESSION_COOKIE_NAME:sso_session}
     cookie-secure: ${SSO_SESSION_COOKIE_SECURE:true}

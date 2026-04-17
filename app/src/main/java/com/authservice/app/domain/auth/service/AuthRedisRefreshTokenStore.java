@@ -1,6 +1,5 @@
 package com.authservice.app.domain.auth.service;
 
-import com.auth.spi.RefreshTokenStore;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -10,7 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
+public class AuthRedisRefreshTokenStore {
 
 	private static final String JTI_PREFIX = "refresh:jti:";
 	private static final String USER_PREFIX = "refresh:user:";
@@ -21,7 +20,6 @@ public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
 		this.redisTemplate = redisTemplate;
 	}
 
-	@Override
 	public void save(String userId, String refreshToken, Instant expiresAt) {
 		String tokenKey = tokenKey(refreshToken);
 		String userKey = userKey(userId, refreshToken);
@@ -40,7 +38,6 @@ public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
 		}
 	}
 
-	@Override
 	public boolean exists(String userId, String refreshToken) {
 		String key = tokenKey(refreshToken);
 		try {
@@ -51,7 +48,6 @@ public class AuthRedisRefreshTokenStore implements RefreshTokenStore {
 		}
 	}
 
-	@Override
 	public void revoke(String userId, String refreshToken) {
 		deleteKey(tokenKey(refreshToken));
 		deleteKey(userKey(userId, refreshToken));

@@ -1,7 +1,6 @@
 package com.authservice.app.security;
 
-import com.auth.config.jwt.AuthJwtProperties;
-import com.auth.spi.TokenService;
+import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,15 +11,16 @@ public class AuthJwtTokenServiceConfig {
 
 	@Bean
 	@Primary
-	public TokenService tokenService(
-		AuthJwtProperties props,
-		@Value("${AUTH_JWT_AUDIENCE:block-service}") String audience
+	public AuthJwtTokenService tokenService(
+		AuthHttpProperties properties,
+		@Value("${AUTH_JWT_AUDIENCE:block-service}")
+		String audience
 	) {
 		return new AuthJwtTokenService(
-			props.getSecret(),
+			properties.getJwt().getSecret(),
 			audience,
-			props.getAccessSeconds(),
-			props.getRefreshSeconds()
+			properties.getJwt().getAccessSeconds(),
+			properties.getJwt().getRefreshSeconds()
 		);
 	}
 }

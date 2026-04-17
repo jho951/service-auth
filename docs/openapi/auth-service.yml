@@ -1,0 +1,676 @@
+openapi: 3.0.3
+info:
+  title: Auth Service Upstream API 문서
+  version: 1.0.0
+  description: |
+    Local copy of service-contract/contracts/openapi/auth-service.upstream.v1.yaml.
+    이 문서는 Auth-service upstream route만 설명합니다.
+    Public /v1 route는 Gateway contract가 소유합니다.
+    이 서비스는 로그인, 토큰 갱신, 로그아웃, GitHub SSO, 세션 검증, 내부 auth account 관리를 제공합니다.
+servers:
+  - url: /
+    description: auth-service 직접 호출 기본 경로
+
+tags:
+  - name: Status
+    description: 서비스 상태와 오류 endpoint
+  - name: Auth
+    description: 비밀번호 로그인, 토큰 갱신, 로그아웃 API
+  - name: SSO
+    description: GitHub SSO와 브라우저 세션 API
+  - name: Internal
+    description: 내부 service-to-service API
+  - name: JWKS
+    description: JSON Web Key Set endpoint입니다.
+
+paths:
+  /:
+    get:
+      tags: [Status]
+      summary: 서비스 상태
+      operationId: getRootStatus
+      responses:
+        '200':
+          description: 서비스가 정상 동작 중입니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+
+  /error:
+    get:
+      tags: [Status]
+      summary: Spring 오류 endpoint 조회
+      operationId: getError
+      responses:
+        default:
+          description: 오류 응답
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEndpointResponse'
+
+  /.well-known/jwks.json:
+    get:
+      tags: [JWKS]
+      summary: JSON Web Key Set 조회
+      operationId: getJwks
+      responses:
+        '200':
+          description: JWKS 응답입니다. RSA public key가 설정되지 않으면 빈 keys를 반환합니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JwksResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 비밀번호 로그인
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 로그인이 성공했습니다. access token과 refresh token을 body와 cookie로 반환합니다.
+          headers:
+            Set-Cookie:
+              description: ACCESS_TOKEN과 refresh token cookie입니다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: access token과 refresh token 갱신
+      operationId: refresh
+      description: 설정된 refresh token cookie에서 refresh token을 추출합니다.
+      responses:
+        '200':
+          description: 토큰 갱신이 성공했습니다.
+          headers:
+            Set-Cookie:
+              description: rotation된 refresh cookie와 ACCESS_TOKEN cookie입니다.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: 로그아웃
+      operationId: logout
+      description: refresh token 또는 session이 있으면 폐기하고 인증 cookie를 삭제합니다.
+      security:
+        - bearerAuth: []
+        - accessTokenCookie: []
+        - ssoSessionCookie: []
+      responses:
+        '204':
+          description: 로그아웃이 성공했고 cookie가 삭제되었습니다.
+          headers:
+            Set-Cookie:
+              description: cookie 삭제 header입니다.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/sso/start:
+    get:
+      tags: [SSO]
+      summary: GitHub SSO 시작
+      operationId: startGithubSso
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/RedirectUri'
+      responses:
+        '302':
+          description: GitHub OAuth authorization으로 redirect합니다.
+          headers:
+            Location:
+              schema:
+                type: string
+            Set-Cookie:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/login/github:
+    get:
+      tags: [SSO]
+      summary: GitHub 로그인 시작
+      operationId: loginGithub
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/RedirectUri'
+      responses:
+        '302':
+          description: GitHub OAuth authorization으로 redirect합니다.
+          headers:
+            Location:
+              schema:
+                type: string
+            Set-Cookie:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/oauth2/authorize/github:
+    get:
+      tags: [SSO]
+      summary: GitHub OAuth 로그인 시작
+      operationId: authorizeGithubOAuth
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/RedirectUri'
+      responses:
+        '302':
+          description: GitHub OAuth authorization으로 redirect합니다.
+          headers:
+            Location:
+              schema:
+                type: string
+            Set-Cookie:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/oauth/github/callback:
+    get:
+      tags: [SSO]
+      summary: legacy GitHub OAuth callback redirect 처리
+      operationId: oauthGithubCallback
+      description: legacy callback 경로를 `/login/oauth2/code/github`으로 redirect합니다.
+      responses:
+        '302':
+          description: Spring OAuth2 callback endpoint로 redirect합니다.
+          headers:
+            Location:
+              schema:
+                type: string
+
+  /login/oauth2/code/github:
+    get:
+      tags: [SSO]
+      summary: GitHub OAuth callback
+      operationId: githubOAuthCallback
+      description: Gateway public `/v1/login/oauth2/code/github`에서 `/v1` prefix를 제거해 전달되는 Spring Security OAuth callback입니다.
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: SSO ticket 또는 error를 포함한 frontend redirect로 응답합니다.
+          headers:
+            Location:
+              schema:
+                type: string
+
+  /auth/exchange:
+    post:
+      tags: [SSO]
+      summary: 일회성 SSO ticket을 cookie로 교환
+      operationId: exchangeSsoTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoExchangeRequest'
+      responses:
+        '204':
+          description: 교환이 성공했습니다. session, access token, refresh token cookie를 설정합니다.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /auth/internal/session/validate:
+    post:
+      tags: [Internal]
+      summary: 현재 auth session 검증
+      operationId: validateInternalSession
+      security:
+        - bearerAuth: []
+        - accessTokenCookie: []
+        - ssoSessionCookie: []
+      responses:
+        '200':
+          description: session 검증 결과입니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalSessionValidationResponse'
+        '401':
+          description: 인증된 session이 아닙니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalSessionValidationResponse'
+
+  /auth/session:
+    get:
+      tags: [SSO]
+      summary: 브라우저 session 검증
+      operationId: getSession
+      security:
+        - bearerAuth: []
+        - accessTokenCookie: []
+        - ssoSessionCookie: []
+      responses:
+        '200':
+          description: session 검증 결과입니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalSessionValidationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [SSO]
+      summary: 현재 SSO principal 조회
+      operationId: getMe
+      security:
+        - bearerAuth: []
+        - accessTokenCookie: []
+        - ssoSessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+      responses:
+        '200':
+          description: 현재 사용자 profile입니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /internal/auth/accounts:
+    post:
+      tags: [Internal]
+      summary: auth account 생성
+      operationId: createInternalAuthAccount
+      security:
+        - internalApiKey: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InternalSecret'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        '201':
+          description: account가 생성되었습니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountGlobalResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /internal/auth/accounts/{userId}:
+    delete:
+      tags: [Internal]
+      summary: user id로 auth account 삭제
+      operationId: deleteInternalAuthAccount
+      security:
+        - internalApiKey: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InternalSecret'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: account가 삭제되었습니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidGlobalResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    accessTokenCookie:
+      type: apiKey
+      in: cookie
+      name: ACCESS_TOKEN
+    ssoSessionCookie:
+      type: apiKey
+      in: cookie
+      name: sso_session
+    internalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Secret
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [explain, editor, admin]
+      description: 대상 page type입니다. admin page는 IP allow-list 검증이 필요할 수 있습니다.
+    RedirectUri:
+      name: redirect_uri
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uri
+      description: 등록된 frontend redirect URI입니다.
+    InternalSecret:
+      name: X-Internal-Secret
+      in: header
+      required: false
+      schema:
+        type: string
+      description: 내부 API secret header입니다. 서비스 설정에 따라 Authorization header도 허용될 수 있습니다.
+
+  responses:
+    BadRequest:
+      description: 잘못된 요청입니다.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VoidGlobalResponse'
+    Unauthorized:
+      description: 인증이 필요하거나 token이 유효하지 않습니다.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VoidGlobalResponse'
+    Forbidden:
+      description: 접근이 거부되었습니다.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VoidGlobalResponse'
+    NotFound:
+      description: 리소스를 찾을 수 없습니다.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VoidGlobalResponse'
+    Conflict:
+      description: 리소스 충돌입니다.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VoidGlobalResponse'
+
+  schemas:
+    StatusResponse:
+      type: object
+      required: [service, status]
+      properties:
+        service:
+          type: string
+          example: auth-service
+        status:
+          type: string
+          example: UP
+
+    ErrorEndpointResponse:
+      type: object
+      required: [status, error, message]
+      properties:
+        status:
+          type: integer
+          example: 500
+        error:
+          type: string
+          example: 내부 서버 오류
+        message:
+          type: string
+          example: 내부 서버 오류
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          format: password
+          example: Password12!
+
+    TokenResponse:
+      type: object
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token입니다.
+        refreshToken:
+          type: string
+          description: JWT refresh token입니다.
+
+    SsoExchangeRequest:
+      type: object
+      required: [ticket]
+      properties:
+        ticket:
+          type: string
+          example: 9d19d206-1a0c-4b7e-9e2e-c89aa4089a10
+
+    InternalSessionValidationResponse:
+      type: object
+      required: [authenticated, userId, role, status, sessionId]
+      properties:
+        authenticated:
+          type: boolean
+          example: true
+        userId:
+          type: string
+          example: 46c45ce7-d50c-436e-9394-263941839cf7
+        role:
+          type: string
+          example: USER
+        status:
+          type: string
+          example: A
+        sessionId:
+          type: string
+          example: 2e9e6db8-3d04-4260-a1fd-c799b79d2d26
+
+    MeResponse:
+      type: object
+      required: [id, email, name, roles, status]
+      properties:
+        id:
+          type: string
+          example: 46c45ce7-d50c-436e-9394-263941839cf7
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        name:
+          type: string
+          example: Jane User
+        avatarUrl:
+          type: string
+          nullable: true
+          example: https://avatars.githubusercontent.com/u/123456
+        roles:
+          type: array
+          items:
+            type: string
+          example: [USER]
+        status:
+          type: string
+          example: A
+
+    CreateAccountRequest:
+      type: object
+      required: [userId, loginId, password]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        loginId:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          format: password
+          example: Password12!
+
+    AccountResponse:
+      type: object
+      required: [authId, userId, loginId]
+      properties:
+        authId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        loginId:
+          type: string
+          format: email
+          example: user@example.com
+
+    JwksResponse:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/Jwk'
+
+    Jwk:
+      type: object
+      properties:
+        kty:
+          type: string
+          example: RSA
+        use:
+          type: string
+          example: sig
+        alg:
+          type: string
+          example: RS256
+        kid:
+          type: string
+          example: auth-jwt-key
+        n:
+          type: string
+          description: base64url로 인코딩된 RSA modulus입니다.
+        e:
+          type: string
+          description: base64url로 인코딩된 RSA exponent입니다.
+
+    VoidGlobalResponse:
+      allOf:
+        - $ref: '#/components/schemas/GlobalResponse'
+        - type: object
+          properties:
+            data:
+              nullable: true
+
+    AccountGlobalResponse:
+      allOf:
+        - $ref: '#/components/schemas/GlobalResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/AccountResponse'
+
+    GlobalResponse:
+      type: object
+      required: [httpStatus, success, message, code]
+      properties:
+        httpStatus:
+          type: integer
+          example: 200
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: 조회 요청 성공
+        code:
+          type: integer
+          example: 1
+        data:
+          nullable: true

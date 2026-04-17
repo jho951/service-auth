@@ -1,5 +1,6 @@
 package com.authservice.app.domain.auth.sso.service;
 
+import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import com.authservice.app.domain.auth.sso.config.SsoProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,8 +27,8 @@ public class SsoCookieService {
 
 	public SsoCookieService(
 		SsoProperties properties,
+		AuthHttpProperties authProperties,
 		@Value("${AUTH_ACCESS_COOKIE_NAME:ACCESS_TOKEN}") String accessTokenCookieName,
-		@Value("${AUTH_ACCESS_EXPIRATION:${JWT_ACCESS_EXPIRATION:1200}}") long accessTokenTtlSeconds,
 		@Value("${AUTH_ACCESS_COOKIE_HTTP_ONLY:true}") boolean accessTokenCookieHttpOnly,
 		@Value("${AUTH_ACCESS_COOKIE_SECURE:${SSO_SESSION_COOKIE_SECURE:false}}") boolean accessTokenCookieSecure,
 		@Value("${AUTH_ACCESS_COOKIE_SAME_SITE:${SSO_SESSION_COOKIE_SAME_SITE:Lax}}") String accessTokenCookieSameSite,
@@ -35,7 +36,7 @@ public class SsoCookieService {
 	) {
 		this.properties = properties;
 		this.accessTokenCookieName = accessTokenCookieName;
-		this.accessTokenTtlSeconds = accessTokenTtlSeconds;
+		this.accessTokenTtlSeconds = authProperties.getJwt().getAccessSeconds();
 		this.accessTokenCookieHttpOnly = accessTokenCookieHttpOnly;
 		this.accessTokenCookieSecure = accessTokenCookieSecure;
 		this.accessTokenCookieSameSite = accessTokenCookieSameSite;

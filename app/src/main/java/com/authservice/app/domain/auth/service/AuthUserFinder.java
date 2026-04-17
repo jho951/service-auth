@@ -1,7 +1,6 @@
 package com.authservice.app.domain.auth.service;
 
-import com.auth.api.model.User;
-import com.auth.spi.UserFinder;
+import com.authservice.app.domain.auth.model.AuthUser;
 import com.authservice.app.domain.auth.userdirectory.service.UserDirectory;
 import java.util.List;
 import java.util.Optional;
@@ -9,7 +8,7 @@ import org.springframework.stereotype.Component;
 import com.authservice.app.domain.auth.repository.AuthRepository;
 
 @Component
-public class AuthUserFinder implements UserFinder {
+public class AuthUserFinder {
 	private final AuthRepository authRepository;
 	private final UserDirectory userDirectory;
 	private final AuthUserCacheStore authUserCacheStore;
@@ -20,9 +19,8 @@ public class AuthUserFinder implements UserFinder {
 		this.authUserCacheStore = authUserCacheStore;
 	}
 
-	@Override
-	public Optional<User> findByUsername(String username) {
-		Optional<User> cached = authUserCacheStore.get(username);
+	public Optional<AuthUser> findByUsername(String username) {
+		Optional<AuthUser> cached = authUserCacheStore.get(username);
 		if (cached.isPresent()) {
 			return cached;
 		}
@@ -32,17 +30,17 @@ public class AuthUserFinder implements UserFinder {
 			.flatMap(auth -> userDirectory.findByUserId(auth.getUserId())
 				.filter(user -> "A".equalsIgnoreCase(user.status()))
 				.map(user -> {
-					User found = new User(
+					AuthUser found = new AuthUser(
 						String.valueOf(user.userId()),
 						auth.getLoginId(),
 						auth.getPasswordHash(),
 						List.of(user.role())
 					);
 					authUserCacheStore.put(
-						found.getUserId(),
-						found.getUsername(),
+						found.userId(),
+						found.username(),
 						auth.getPasswordHash(),
-						found.getRoles()
+						found.roles()
 					);
 					return found;
 				}));

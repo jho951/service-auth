@@ -13,9 +13,9 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "internal.api")
 public class InternalApiProperties {
 
-	public static final String INTERNAL_SECRET_HEADER = "X-Internal-Request-Secret";
-
 	private String key;
+
+	public static final String INTERNAL_SECRET_HEADER = "X-Internal-Request-Secret";
 
 	public void validateInternalAccess(String authorization, String internalRequestSecret) {
 		if (isValidAuthorizationHeader(authorization) || isValidInternalSecret(internalRequestSecret)) return;

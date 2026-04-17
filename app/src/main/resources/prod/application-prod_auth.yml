@@ -3,7 +3,7 @@ auth:
   user-cache-ttl-seconds: ${AUTH_USER_CACHE_TTL_SECONDS:300}
   bearer-prefix: "Bearer "
   refresh-cookie-enabled: true
-  refresh-cookie-name: ${AUTH_REFRESH_COOKIE_NAME:${JWT_COOKIE_NAME:refresh_token}}
+  refresh-cookie-name: ${AUTH_REFRESH_COOKIE_NAME:refresh_token}
   refresh-cookie-http-only: true
   refresh-cookie-secure: ${AUTH_REFRESH_COOKIE_SECURE:true}
   refresh-cookie-path: /
@@ -11,12 +11,12 @@ auth:
   auto-security: false
   oauth2:
     enabled: false
-    authorization-base-uri: /v1/oauth2/authorization
-    login-processing-base-uri: /v1/login/oauth2/code/*
+    authorization-base-uri: /oauth2/authorization
+    login-processing-base-uri: /login/oauth2/code/*
   jwt:
-    secret: ${AUTH_JWT_SECRET:${JWT_ACCESS_TOKEN_SECRET:}}
-    access-seconds: ${AUTH_ACCESS_EXPIRATION:${JWT_ACCESS_EXPIRATION:1200}}
-    refresh-seconds: ${AUTH_REFRESH_EXPIRATION:${JWT_REFRESH_EXPIRATION:30000}}
+    secret: ${AUTH_JWT_SECRET:}
+    access-seconds: ${AUTH_ACCESS_EXPIRATION:1200}
+    refresh-seconds: ${AUTH_REFRESH_EXPIRATION:30000}
 
 AUTH_ACCESS_COOKIE_SECURE: true
 AUTH_ACCESS_COOKIE_SAME_SITE: None
@@ -29,7 +29,7 @@ spring:
           github:
             client-id: ${SSO_GITHUB_CLIENT_ID:}
             client-secret: ${SSO_GITHUB_CLIENT_SECRET:}
-            redirect-uri: "{baseUrl}/v1/login/oauth2/code/{registrationId}"
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             scope:
               - read:user
               - user:email

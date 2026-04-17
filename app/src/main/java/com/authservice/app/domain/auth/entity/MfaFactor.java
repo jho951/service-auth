@@ -1,19 +1,17 @@
 package com.authservice.app.domain.auth.entity;
 
+import com.authservice.app.domain.auth.support.Uuid32;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "mfa_factors")
@@ -22,14 +20,13 @@ import org.hibernate.type.SqlTypes;
 public class MfaFactor {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.UUID)
-	@Column(name = "id", nullable = false, updatable = false, columnDefinition = "char(36)")
-	@JdbcTypeCode(SqlTypes.CHAR)
-	private UUID id;
+	@Getter(AccessLevel.NONE)
+	@Column(name = "id", nullable = false, updatable = false, length = 32, columnDefinition = "char(32)")
+	private String id;
 
-	@Column(name = "user_id", nullable = false, columnDefinition = "char(36)")
-	@JdbcTypeCode(SqlTypes.CHAR)
-	private UUID userId;
+	@Getter(AccessLevel.NONE)
+	@Column(name = "user_id", nullable = false, length = 32, columnDefinition = "char(32)")
+	private String userId;
 
 	@Column(name = "factor_type", nullable = false)
 	private String factorType;
@@ -46,8 +43,19 @@ public class MfaFactor {
 	@Column(name = "updated_at", nullable = false)
 	private LocalDateTime updatedAt;
 
+	public UUID getId() {
+		return Uuid32.toUuid(id);
+	}
+
+	public UUID getUserId() {
+		return Uuid32.toUuid(userId);
+	}
+
 	@PrePersist
 	void onCreate() {
+		if (id == null) {
+			id = Uuid32.generate();
+		}
 		LocalDateTime now = LocalDateTime.now();
 		createdAt = now;
 		updatedAt = now;

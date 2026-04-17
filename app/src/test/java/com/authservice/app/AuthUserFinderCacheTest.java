@@ -6,8 +6,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.auth.api.model.User;
 import com.authservice.app.domain.auth.entity.Auth;
+import com.authservice.app.domain.auth.model.AuthUser;
 import com.authservice.app.domain.auth.repository.AuthRepository;
 import com.authservice.app.domain.auth.service.AuthUserCacheStore;
 import com.authservice.app.domain.auth.service.AuthUserFinder;
@@ -43,10 +43,10 @@ class AuthUserFinderCacheTest {
 
 	@Test
 	void returnsCachedUserWhenRedisHit() {
-		User cached = new User("user-id", "login-id", "pw-hash", List.of("USER"));
+		AuthUser cached = new AuthUser("user-id", "login-id", "pw-hash", List.of("USER"));
 		when(authUserCacheStore.get("login-id")).thenReturn(Optional.of(cached));
 
-		Optional<User> result = authUserFinder.findByUsername("login-id");
+		Optional<AuthUser> result = authUserFinder.findByUsername("login-id");
 
 		assertThat(result).contains(cached);
 		verify(authRepository, never()).findByLoginId(any());
@@ -67,11 +67,11 @@ class AuthUserFinderCacheTest {
 		when(authRepository.findByLoginId("login-id")).thenReturn(Optional.of(auth));
 		when(userDirectory.findByUserId(userId)).thenReturn(Optional.of(profile));
 
-		Optional<User> result = authUserFinder.findByUsername("login-id");
+		Optional<AuthUser> result = authUserFinder.findByUsername("login-id");
 
 		assertThat(result).isPresent();
-		assertThat(result.get().getUsername()).isEqualTo("login-id");
-		assertThat(result.get().getRoles()).containsExactly("ADMIN");
+		assertThat(result.get().username()).isEqualTo("login-id");
+		assertThat(result.get().roles()).containsExactly("ADMIN");
 		verify(authUserCacheStore).put(any(), any(), any(), any());
 	}
 
@@ -89,10 +89,10 @@ class AuthUserFinderCacheTest {
 		when(authRepository.findByLoginId("short-active")).thenReturn(Optional.of(auth));
 		when(userDirectory.findByUserId(userId)).thenReturn(Optional.of(profile));
 
-		Optional<User> result = authUserFinder.findByUsername("short-active");
+		Optional<AuthUser> result = authUserFinder.findByUsername("short-active");
 
 		assertThat(result).isPresent();
-		assertThat(result.get().getRoles()).containsExactly("USER");
+		assertThat(result.get().roles()).containsExactly("USER");
 		verify(authUserCacheStore).put(any(), any(), any(), any());
 	}
 
@@ -110,7 +110,7 @@ class AuthUserFinderCacheTest {
 		when(authRepository.findByLoginId("legacy-active")).thenReturn(Optional.of(auth));
 		when(userDirectory.findByUserId(userId)).thenReturn(Optional.of(profile));
 
-		Optional<User> result = authUserFinder.findByUsername("legacy-active");
+		Optional<AuthUser> result = authUserFinder.findByUsername("legacy-active");
 
 		assertThat(result).isEmpty();
 		verify(authUserCacheStore, never()).put(any(), any(), any(), any());

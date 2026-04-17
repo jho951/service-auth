@@ -7,13 +7,12 @@ import org.springframework.stereotype.Component;
 
 @Getter
 @Setter
-@Component
-@ConfigurationProperties(prefix = "user-service")
-public class UserServiceProperties {
+	@Component
+	@ConfigurationProperties(prefix = "user-service")
+	public class UserServiceProperties {
 
-	private String baseUrl;
-	private String internalApiKey;
-	private Jwt jwt = new Jwt();
+		private String baseUrl;
+		private Jwt jwt = new Jwt();
 
 	@Getter
 	@Setter

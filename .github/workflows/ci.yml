@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
+
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
     steps:
       - name: Checkout source code

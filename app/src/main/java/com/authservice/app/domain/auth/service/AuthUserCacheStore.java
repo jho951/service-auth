@@ -1,6 +1,6 @@
 package com.authservice.app.domain.auth.service;
 
-import com.auth.api.model.User;
+import com.authservice.app.domain.auth.model.AuthUser;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +25,7 @@ public class AuthUserCacheStore {
 		this.ttl = Duration.ofSeconds(Math.max(1, ttlSeconds));
 	}
 
-	public Optional<User> get(String username) {
+	public Optional<AuthUser> get(String username) {
 		try {
 			Object cached = redisTemplate.opsForValue().get(key(username));
 			if (cached instanceof CachedAuthUser value) {
@@ -62,7 +62,7 @@ public class AuthUserCacheStore {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Optional<User> mapToUser(Map<?, ?> map) {
+	private Optional<AuthUser> mapToUser(Map<?, ?> map) {
 		Object userId = map.get("userId");
 		Object username = map.get("username");
 		Object password = map.containsKey("passwordHash") ? map.get("passwordHash") : map.get("password");
@@ -80,7 +80,7 @@ public class AuthUserCacheStore {
 		if (roles.isEmpty()) {
 			return Optional.empty();
 		}
-		return Optional.of(new User((String) userId, (String) username, (String) password, roles));
+		return Optional.of(new AuthUser((String) userId, (String) username, (String) password, roles));
 	}
 
 	private record CachedAuthUser(
@@ -89,8 +89,8 @@ public class AuthUserCacheStore {
 		String passwordHash,
 		List<String> roles
 	) {
-		private User toUser() {
-			return new User(userId, username, passwordHash, roles);
+		private AuthUser toUser() {
+			return new AuthUser(userId, username, passwordHash, roles);
 		}
 	}
 }

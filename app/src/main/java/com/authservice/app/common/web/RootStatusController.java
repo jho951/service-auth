@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class RootStatusController {
 
-	@GetMapping({"/", "/v1"})
+	@GetMapping("/")
 	public Map<String, String> status() {
 		return Map.of(
 			"service", "auth-service",

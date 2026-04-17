@@ -4,20 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.auth.api.model.Tokens;
-import com.auth.config.controller.RefreshCookieWriter;
-import com.auth.config.controller.RefreshTokenExtractor;
-import com.auth.core.service.AuthService;
 import com.authservice.app.domain.auth.controller.AuthController;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
+import com.authservice.app.domain.auth.model.AuthTokens;
 import com.authservice.app.domain.auth.sso.service.SsoCookieService;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
+import com.authservice.app.domain.auth.service.AuthLoginService;
 import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
+import com.authservice.app.domain.auth.support.RefreshCookieWriter;
+import com.authservice.app.domain.auth.support.RefreshTokenExtractor;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +30,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 class AuthControllerFlowTest {
 
 	@Mock
-	private AuthService authService;
+	private AuthLoginService authService;
 
 	@Mock
 	private RefreshTokenExtractor refreshTokenExtractor;
@@ -66,12 +65,13 @@ class AuthControllerFlowTest {
 	void loginSuccessReturnsAccessAndRefreshTokenPair() {
 		AuthRequest.LoginRequest request = new AuthRequest.LoginRequest("user@example.com", "Password12!");
 		MockHttpServletRequest servletRequest = new MockHttpServletRequest();
-		Tokens tokens = mock(Tokens.class);
-		when(tokens.getAccessToken()).thenReturn("access-token");
-		when(tokens.getRefreshToken()).thenReturn("refresh-token");
+		AuthTokens tokens = new AuthTokens("access-token", "refresh-token");
 		when(ssoCookieService.buildAccessTokenCookie("access-token")).thenReturn("access=access-token");
 		when(authService.login(request.getUsername(), request.getPassword())).thenReturn(tokens);
-		when(refreshCookieWriter.write(any(Tokens.class), any(ResponseEntity.class)))
+		when(refreshCookieWriter.write(
+			any(AuthTokens.class),
+			anyTokenResponseEntity()
+		))
 			.thenReturn(ResponseEntity.ok().build());
 
 		ResponseEntity<AuthResponse.TokenResponse> response = authController.login(request, servletRequest);
@@ -101,13 +101,14 @@ class AuthControllerFlowTest {
 	@Test
 	void refreshReturnsRotatedTokenPair() {
 		HttpServletRequest servletRequest = new MockHttpServletRequest();
-		Tokens refreshed = mock(Tokens.class);
-		when(refreshed.getAccessToken()).thenReturn("new-access-token");
-		when(refreshed.getRefreshToken()).thenReturn("new-refresh-token");
+		AuthTokens refreshed = new AuthTokens("new-access-token", "new-refresh-token");
 		when(ssoCookieService.buildAccessTokenCookie("new-access-token")).thenReturn("access=new-access-token");
 		when(refreshTokenExtractor.extract(servletRequest)).thenReturn("old-refresh-token");
 		when(authService.refresh("old-refresh-token")).thenReturn(refreshed);
-		when(refreshCookieWriter.write(any(Tokens.class), any(ResponseEntity.class)))
+		when(refreshCookieWriter.write(
+			any(AuthTokens.class),
+			anyTokenResponseEntity()
+		))
 			.thenReturn(ResponseEntity.ok().build());
 
 		ResponseEntity<AuthResponse.TokenResponse> response = authController.refresh(servletRequest);
@@ -124,12 +125,20 @@ class AuthControllerFlowTest {
 		HttpServletRequest servletRequest = new MockHttpServletRequest();
 		when(refreshTokenExtractor.extract(servletRequest)).thenReturn("refresh-token");
 		when(ssoCookieService.clearAccessTokenCookie()).thenReturn("access=; Max-Age=0");
-		when(refreshCookieWriter.clear(any(ResponseEntity.class))).thenReturn(ResponseEntity.noContent().build());
+		when(refreshCookieWriter.clear(anyVoidResponseEntity())).thenReturn(ResponseEntity.noContent().build());
 
 		ResponseEntity<Void> response = authController.logout(servletRequest);
 
 		assertThat(response.getStatusCode().value()).isEqualTo(204);
 		verify(authService).logout("refresh-token");
-		verify(refreshCookieWriter).clear(any(ResponseEntity.class));
+		verify(refreshCookieWriter).clear(anyVoidResponseEntity());
+	}
+
+	private ResponseEntity<AuthResponse.TokenResponse> anyTokenResponseEntity() {
+		return any();
+	}
+
+	private ResponseEntity<Void> anyVoidResponseEntity() {
+		return any();
 	}
 }

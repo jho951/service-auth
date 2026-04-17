@@ -4,7 +4,6 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
-      - com.ipguard.config.IpGuardAutoConfiguration
 
   config:
     import:
@@ -26,14 +25,13 @@ internal:
 
 user-service:
   base-url: ${USER_SERVICE_BASE_URL:}
-  internal-api-key: ${USER_SERVICE_INTERNAL_API_KEY:${INTERNAL_API_KEY:local-internal-api-key}}
   jwt:
     issuer: ${USER_SERVICE_JWT_ISSUER:auth-service}
     audience: ${USER_SERVICE_JWT_AUDIENCE:user-service}
     subject: ${USER_SERVICE_JWT_SUBJECT:auth-service}
     scope: ${USER_SERVICE_JWT_SCOPE:internal}
     ttl-seconds: ${USER_SERVICE_JWT_TTL_SECONDS:60}
-    secret: ${USER_SERVICE_JWT_SECRET:${AUTH_JWT_SECRET:${JWT_ACCESS_TOKEN_SECRET:}}}
+    secret: ${USER_SERVICE_JWT_SECRET:${AUTH_JWT_SECRET:}}
 
 auditlog:
   enabled: ${AUDITLOG_ENABLED:true}
@@ -47,3 +45,112 @@ auditlog:
   async-thread-count: ${AUDITLOG_ASYNC_THREAD_COUNT:2}
   async-queue-capacity: ${AUDITLOG_ASYNC_QUEUE_CAPACITY:1000}
   web-enabled: ${AUDITLOG_WEB_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      service: ${spring.application.name}
+      env: ${SPRING_PROFILES_ACTIVE:local}
+
+platform:
+  governance:
+    enabled: ${PLATFORM_GOVERNANCE_ENABLED:true}
+    audit:
+      enabled: ${PLATFORM_GOVERNANCE_AUDIT_ENABLED:true}
+    plugin-policy-engine:
+      store: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_STORE:MEMORY}
+      file-path: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_FILE_PATH:}
+      cache-ttl-millis: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_CACHE_TTL_MILLIS:3000}
+    engine:
+      strict: ${PLATFORM_GOVERNANCE_ENGINE_STRICT:false}
+    violation:
+      action: ${PLATFORM_GOVERNANCE_VIOLATION_ACTION:DENY}
+      handler-failure-fatal: ${PLATFORM_GOVERNANCE_VIOLATION_HANDLER_FAILURE_FATAL:false}
+    operational:
+      fail-fast-enabled: ${PLATFORM_GOVERNANCE_OPERATIONAL_FAIL_FAST_ENABLED:true}
+      production-profiles: ${PLATFORM_GOVERNANCE_OPERATIONAL_PRODUCTION_PROFILES:prod}
+      allow-audit-disabled-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_AUDIT_DISABLED_IN_PRODUCTION:false}
+      allow-non-strict-engine-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_NON_STRICT_ENGINE_IN_PRODUCTION:false}
+      allow-permissive-violation-action-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_PERMISSIVE_VIOLATION_ACTION_IN_PRODUCTION:false}
+      require-audit-sink-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_AUDIT_SINK_IN_PRODUCTION:true}
+      require-policy-config-in-enforcing-mode: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_POLICY_CONFIG_IN_ENFORCING_MODE:true}
+      require-fatal-handler-failures-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_FATAL_HANDLER_FAILURES_IN_PRODUCTION:true}
+  security:
+    enabled: true
+    boundary:
+      public-paths:
+        - /
+        - /.well-known/**
+        - /error
+        - /health
+        - /actuator/health
+        - /actuator/health/**
+        - /favicon.ico
+        - /auth/login
+        - /auth/refresh
+        - /auth/logout
+        - /auth/sso/start
+        - /auth/oauth/github/callback
+        - /auth/login/github
+        - /auth/oauth2/authorize/github
+        - /auth/exchange
+        - /oauth2/**
+        - /login/oauth2/**
+      protected-paths:
+        - /auth/session
+        - /auth/me
+        - /api/**
+      admin-paths:
+        - /admin/**
+      internal-paths:
+        - /internal/**
+        - /auth/internal/**
+    auth:
+      enabled: true
+      default-mode: HYBRID
+      allow-session-for-browser: true
+      allow-bearer-for-api: true
+      internal-token-enabled: true
+      jwt-secret: ${AUTH_JWT_SECRET}
+      access-token-ttl: PT20M
+      refresh-token-ttl: PT30000S
+    ip-guard:
+      enabled: true
+      trust-proxy: true
+      admin-allow-cidrs: ${PLATFORM_SECURITY_ADMIN_ALLOW_CIDRS:${PLATFORM_SECURITY_ADMIN_ALLOW_CIDR:10.0.0.0/8}}
+      internal-allow-cidrs: ${PLATFORM_SECURITY_INTERNAL_ALLOW_CIDRS:${PLATFORM_SECURITY_INTERNAL_ALLOW_CIDR:172.16.0.0/12}}
+    rate-limit:
+      enabled: true
+      anonymous:
+        requests: 30
+        window-seconds: 60
+      authenticated:
+        requests: 200
+        window-seconds: 60
+      internal:
+        requests: 1000
+        window-seconds: 60
+      routes:
+        - name: auth-login
+          patterns:
+            - /auth/login
+            - /auth/login/github
+            - /auth/oauth2/authorize/github
+            - /auth/sso/start
+          requests: ${PLATFORM_SECURITY_RATE_LIMIT_AUTH_LOGIN_REQUESTS:10}
+          window-seconds: ${PLATFORM_SECURITY_RATE_LIMIT_AUTH_LOGIN_WINDOW_SECONDS:60}
+        - name: auth-refresh
+          patterns:
+            - /auth/refresh
+            - /auth/exchange
+          requests: ${PLATFORM_SECURITY_RATE_LIMIT_AUTH_REFRESH_REQUESTS:20}
+          window-seconds: ${PLATFORM_SECURITY_RATE_LIMIT_AUTH_REFRESH_WINDOW_SECONDS:60}

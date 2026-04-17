@@ -1,5 +1,7 @@
 package com.authservice.app.domain.auth.dto;
 
+import com.authservice.app.common.base.dto.BaseResponse;
+
 /**
  * 인증 관련 응답 DTO들을 관리하는 컨테이너 클래스입니다.
  * 외부 유출을 최소화하기 위해 필요한 응답 객체들을 정적 내부 클래스로 포함합니다.
@@ -7,7 +9,7 @@ package com.authservice.app.domain.auth.dto;
 public class AuthResponse {
 
 	/** 인증 성공 후 클라이언트에게 전달할 토큰 정보를 담는 응답 객체입니다.*/
-	public static class TokenResponse {
+	public static class TokenResponse extends BaseResponse {
 		private String accessToken;
 		private String refreshToken;
 

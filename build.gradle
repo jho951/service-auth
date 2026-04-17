@@ -3,12 +3,8 @@ plugins {
 }
 
 allprojects {
-    group = providers.gradleProperty('projectGroup').get()
-    version = providers.gradleProperty('projectVersion').get()
-
-    repositories {
-        mavenCentral()
-    }
+    group = providers.gradleProperty('project_group').get()
+    version = providers.gradleProperty('project_version').get()
 }
 
 subprojects {
@@ -16,7 +12,7 @@ subprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(providers.gradleProperty('java_version').get().toInteger())
         }
     }
 
@@ -26,7 +22,16 @@ subprojects {
         }
     }
 
+    dependencies {
+        testRuntimeOnly libs.junit.platform.launcher
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs += ['-Xlint:unchecked']
+    }
+
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
+        jvmArgs '-Xshare:off'
     }
 }

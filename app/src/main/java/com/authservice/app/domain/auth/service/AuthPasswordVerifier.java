@@ -1,11 +1,10 @@
 package com.authservice.app.domain.auth.service;
 
-import com.auth.spi.PasswordVerifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AuthPasswordVerifier implements PasswordVerifier {
+public class AuthPasswordVerifier {
 
 	private final PasswordEncoder passwordEncoder;
 
@@ -13,7 +12,6 @@ public class AuthPasswordVerifier implements PasswordVerifier {
 		this.passwordEncoder = passwordEncoder;
 	}
 
-	@Override
 	public boolean matches(String rawPassword, String encodedPassword) {
 		return passwordEncoder.matches(rawPassword, encodedPassword);
 	}

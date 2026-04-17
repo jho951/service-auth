@@ -1,60 +1,103 @@
 package com.authservice.app.domain.audit.service;
 
-import com.auditlog.api.AuditActorType;
-import com.auditlog.api.AuditEvent;
-import com.auditlog.api.AuditEventType;
-import com.auditlog.api.AuditLogger;
+import io.github.jho951.platform.governance.api.AuditEntry;
+import io.github.jho951.platform.governance.api.AuditLogRecorder;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthAuditLogService {
 
-	private final AuditLogger auditLogger;
+	private final AuditLogRecorder auditLogRecorder;
 
-	public AuthAuditLogService(AuditLogger auditLogger) {
-		this.auditLogger = auditLogger;
+	public AuthAuditLogService(AuditLogRecorder auditLogRecorder) {
+		this.auditLogRecorder = auditLogRecorder;
 	}
 
 	public void logPasswordLoginSuccess(String loginId) {
-		auditLogger.logSuccess(AuditEvent.builder(AuditEventType.LOGIN, "AUTH_LOGIN_PASSWORD")
-			.actor(loginIdOrUnknown(loginId), AuditActorType.USER, null)
-			.resource("AUTH_ACCOUNT", loginIdOrUnknown(loginId))
-			.detail("channel", "PASSWORD"));
+		record("AUTH_LOGIN_PASSWORD", Map.of(
+			"eventType", "LOGIN",
+			"result", "SUCCESS",
+			"actorType", "USER",
+			"actorId", loginIdOrUnknown(loginId),
+			"resourceType", "AUTH_ACCOUNT",
+			"resourceId", loginIdOrUnknown(loginId),
+			"channel", "PASSWORD"
+		));
 	}
 
 	public void logPasswordLoginFailure(String loginId, String reasonCode) {
-		auditLogger.logFailure(AuditEvent.builder(AuditEventType.LOGIN, "AUTH_LOGIN_PASSWORD")
-			.actor(loginIdOrUnknown(loginId), AuditActorType.ANONYMOUS, null)
-			.resource("AUTH_ACCOUNT", loginIdOrUnknown(loginId))
-			.detail("channel", "PASSWORD"), reasonOrDefault(reasonCode));
+		record("AUTH_LOGIN_PASSWORD", Map.of(
+			"eventType", "LOGIN",
+			"result", "FAILURE",
+			"reason", reasonOrDefault(reasonCode),
+			"actorType", "ANONYMOUS",
+			"actorId", loginIdOrUnknown(loginId),
+			"resourceType", "AUTH_ACCOUNT",
+			"resourceId", loginIdOrUnknown(loginId),
+			"channel", "PASSWORD"
+		));
 	}
 
 	public void logSsoLoginSuccess(String userId, String provider) {
-		auditLogger.logSuccess(AuditEvent.builder(AuditEventType.LOGIN, "AUTH_LOGIN_SSO")
-			.actor(stringOrUnknown(userId), AuditActorType.USER, null)
-			.resource("AUTH_SESSION", stringOrUnknown(userId))
-			.detail("channel", "SSO")
-			.detail("provider", stringOrUnknown(provider)));
+		record("AUTH_LOGIN_SSO", Map.of(
+			"eventType", "LOGIN",
+			"result", "SUCCESS",
+			"actorType", "USER",
+			"actorId", stringOrUnknown(userId),
+			"resourceType", "AUTH_SESSION",
+			"resourceId", stringOrUnknown(userId),
+			"channel", "SSO",
+			"provider", stringOrUnknown(provider)
+		));
 	}
 
 	public void logLogout(String userId, String channel) {
-		auditLogger.logSuccess(AuditEvent.builder(AuditEventType.LOGOUT, "AUTH_LOGOUT")
-			.actor(stringOrUnknown(userId), AuditActorType.USER, null)
-			.resource("AUTH_SESSION", stringOrUnknown(userId))
-			.detail("channel", stringOrUnknown(channel)));
+		record("AUTH_LOGOUT", Map.of(
+			"eventType", "LOGOUT",
+			"result", "SUCCESS",
+			"actorType", "USER",
+			"actorId", stringOrUnknown(userId),
+			"resourceType", "AUTH_SESSION",
+			"resourceId", stringOrUnknown(userId),
+			"channel", stringOrUnknown(channel)
+		));
 	}
 
 	public void logInternalAccountCreate(String userId, String loginId) {
-		auditLogger.logSuccess(AuditEvent.builder(AuditEventType.CREATE, "AUTH_INTERNAL_ACCOUNT_CREATE")
-			.actor("internal-service", AuditActorType.SERVICE, "gateway-or-user-service")
-			.resource("AUTH_ACCOUNT", stringOrUnknown(userId))
-			.detail("loginId", loginIdOrUnknown(loginId)));
+		record("AUTH_INTERNAL_ACCOUNT_CREATE", Map.of(
+			"eventType", "CREATE",
+			"result", "SUCCESS",
+			"actorType", "SERVICE",
+			"actorId", "internal-service",
+			"actorSystem", "gateway-or-user-service",
+			"resourceType", "AUTH_ACCOUNT",
+			"resourceId", stringOrUnknown(userId),
+			"loginId", loginIdOrUnknown(loginId)
+		));
 	}
 
 	public void logInternalAccountDelete(String userId) {
-		auditLogger.logSuccess(AuditEvent.builder(AuditEventType.DELETE, "AUTH_INTERNAL_ACCOUNT_DELETE")
-			.actor("internal-service", AuditActorType.SERVICE, "gateway-or-user-service")
-			.resource("AUTH_ACCOUNT", stringOrUnknown(userId)));
+		record("AUTH_INTERNAL_ACCOUNT_DELETE", Map.of(
+			"eventType", "DELETE",
+			"result", "SUCCESS",
+			"actorType", "SERVICE",
+			"actorId", "internal-service",
+			"actorSystem", "gateway-or-user-service",
+			"resourceType", "AUTH_ACCOUNT",
+			"resourceId", stringOrUnknown(userId)
+		));
+	}
+
+	private void record(String message, Map<String, String> attributes) {
+		auditLogRecorder.record(new AuditEntry(
+			"auth",
+			message,
+			new LinkedHashMap<>(attributes),
+			Instant.now()
+		));
 	}
 
 	private static String loginIdOrUnknown(String loginId) {

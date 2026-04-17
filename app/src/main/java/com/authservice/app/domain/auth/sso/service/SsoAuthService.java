@@ -1,10 +1,6 @@
 package com.authservice.app.domain.auth.sso.service;
 
-import com.auth.config.AuthProperties;
-import com.auth.config.controller.RefreshCookieWriter;
-import com.auth.api.model.Principal;
-import com.auth.api.model.Tokens;
-import com.auth.spi.TokenService;
+import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import com.authservice.app.domain.auth.sso.config.SsoProperties;
 import com.authservice.app.domain.auth.sso.model.GithubUserProfile;
 import com.authservice.app.domain.auth.sso.model.SsoPageType;
@@ -13,7 +9,14 @@ import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoSessionPayl
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoStatePayload;
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoTicketPayload;
 import com.authservice.app.domain.auth.sso.model.SsoTargetPage;
+import com.authservice.app.domain.auth.support.RefreshCookieWriter;
+import com.authservice.app.domain.auth.support.RefreshTokenExtractor;
+import com.authservice.app.domain.auth.model.AuthPrincipal;
+import com.authservice.app.domain.auth.model.AuthTokens;
+import com.authservice.app.domain.auth.service.AuthLoginService;
+import com.authservice.app.domain.auth.service.AuthRedisRefreshTokenStore;
 import com.authservice.app.domain.audit.service.AuthAuditLogService;
+import com.authservice.app.security.AuthJwtTokenService;
 import com.authservice.app.common.base.constant.ErrorCode;
 import com.authservice.app.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.userdirectory.service.UserDirectory;
@@ -42,24 +45,30 @@ public class SsoAuthService {
 	private static final String OAUTH_STATE_SESSION_KEY = "sso_oauth_state";
 
 	private final SsoProperties properties;
-	private final AuthProperties authProperties;
+	private final AuthHttpProperties authProperties;
 	private final SsoSessionStore sessionStore;
 	private final SsoUserService ssoUserService;
 	private final UserDirectory userDirectory;
-	private final TokenService tokenService;
+	private final AuthJwtTokenService tokenService;
+	private final AuthLoginService authLoginService;
+	private final AuthRedisRefreshTokenStore refreshTokenStore;
 	private final RefreshCookieWriter refreshCookieWriter;
+	private final RefreshTokenExtractor refreshTokenExtractor;
 	private final SsoCookieService cookieService;
 	private final AdminIpGuardService adminIpGuardService;
 	private final AuthAuditLogService authAuditLogService;
 
 	public SsoAuthService(
 		SsoProperties properties,
-		AuthProperties authProperties,
+		AuthHttpProperties authProperties,
 		SsoSessionStore sessionStore,
 		SsoUserService ssoUserService,
 		UserDirectory userDirectory,
-		TokenService tokenService,
+		AuthJwtTokenService tokenService,
+		AuthLoginService authLoginService,
+		AuthRedisRefreshTokenStore refreshTokenStore,
 		RefreshCookieWriter refreshCookieWriter,
+		RefreshTokenExtractor refreshTokenExtractor,
 		SsoCookieService cookieService,
 		AdminIpGuardService adminIpGuardService,
 		AuthAuditLogService authAuditLogService
@@ -70,7 +79,10 @@ public class SsoAuthService {
 		this.ssoUserService = ssoUserService;
 		this.userDirectory = userDirectory;
 		this.tokenService = tokenService;
+		this.authLoginService = authLoginService;
+		this.refreshTokenStore = refreshTokenStore;
 		this.refreshCookieWriter = refreshCookieWriter;
+		this.refreshTokenExtractor = refreshTokenExtractor;
 		this.cookieService = cookieService;
 		this.adminIpGuardService = adminIpGuardService;
 		this.authAuditLogService = authAuditLogService;
@@ -104,18 +116,6 @@ public class SsoAuthService {
 			.build();
 	}
 
-	public org.springframework.http.ResponseEntity<Void> startOAuthLogin(
-		String provider,
-		String page,
-		String redirectUri,
-		HttpServletRequest request
-	) {
-		if (!"github".equalsIgnoreCase(provider)) {
-			throw new GlobalException(ErrorCode.INVALID_REQUEST);
-		}
-		return startGithubLogin(page, redirectUri, request);
-	}
-
 	public org.springframework.http.ResponseEntity<Void> exchangeTicket(String ticket, HttpServletRequest request) {
 		SsoTicketPayload payload = sessionStore.consumeTicket(ticket)
 			.orElseThrow(() -> new GlobalException(ErrorCode.UNAUTHORIZED));
@@ -141,13 +141,24 @@ public class SsoAuthService {
 		);
 		authAuditLogService.logSsoLoginSuccess(payload.getUserId(), "github");
 
-		Principal principal = new Principal(
+		AuthPrincipal principal = new AuthPrincipal(
 			payload.getUserId(),
-			payload.getRoles() == null ? List.of() : payload.getRoles()
+			payload.getRoles() == null ? List.of() : payload.getRoles(),
+			java.util.Map.of(
+				"email", payload.getEmail() == null ? "" : payload.getEmail(),
+				"name", payload.getName() == null ? "" : payload.getName(),
+				"avatarUrl", payload.getAvatarUrl() == null ? "" : payload.getAvatarUrl(),
+				"status", payload.getStatus() == null ? "" : payload.getStatus()
+			)
 		);
 		String accessToken = tokenService.issueAccessToken(principal);
 		String refreshToken = tokenService.issueRefreshToken(principal);
-		Tokens tokens = new Tokens(accessToken, refreshToken);
+		AuthTokens tokens = new AuthTokens(accessToken, refreshToken);
+		refreshTokenStore.save(
+			principal.userId(),
+			refreshToken,
+			Instant.now().plusSeconds(authProperties.getJwt().getRefreshSeconds())
+		);
 		String sessionCookie = cookieService.buildSessionCookie(sessionId);
 		String accessTokenCookie = cookieService.buildAccessTokenCookie(accessToken);
 
@@ -205,6 +216,9 @@ public class SsoAuthService {
 
 	public URI completeOAuthLogin(SsoPrincipal principal, HttpServletRequest request) {
 		SsoStatePayload statePayload = consumeOAuthState(request);
+		if (SsoPageType.from(statePayload.getPageType()) == SsoPageType.ADMIN) {
+			adminIpGuardService.validate(request);
+		}
 
 		String ticket = UUID.randomUUID().toString();
 		Instant expiresAt = Instant.now().plusSeconds(properties.getTicketTtlSeconds());
@@ -274,6 +288,13 @@ public class SsoAuthService {
 		if (authentication != null && authentication.isAuthenticated() && authentication.getName() != null && !authentication.getName().isBlank()) {
 			actorId = authentication.getName();
 		}
+		refreshTokenExtractor.extractOptional(request).ifPresent(refreshToken -> {
+			try {
+				authLoginService.logout(refreshToken);
+			} catch (RuntimeException ex) {
+				log.warn("Refresh token revoke skipped during logout. reason={}", ex.getClass().getSimpleName());
+			}
+		});
 		authAuditLogService.logLogout(actorId, "SSO");
 		org.springframework.http.ResponseEntity<Void> response = org.springframework.http.ResponseEntity.noContent()
 			.header(HttpHeaders.SET_COOKIE, cookieService.clearSessionCookieValue())

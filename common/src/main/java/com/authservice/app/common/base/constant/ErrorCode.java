@@ -19,13 +19,18 @@ public enum ErrorCode {
 	CONFLICT_AUTH_ACCOUNT(409,  9005, "이미 존재하는 인증 계정입니다."),
 	NOT_FOUND_AUTH_ACCOUNT(404,  9006, "인증 계정을 찾을 수 없습니다."),
 	USER_SERVICE_UNAVAILABLE(502,  9007, "user-service 연동에 실패했습니다."),
-
 	FAIL(400,9999, "요청 응답 실패, 관리자에게 문의해주세요.");
 
 	private final int httpStatus;
 	private final int code;
 	private final String message;
 
+	/**
+	 * 생성자
+	 * @param httpStatus 상태
+	 * @param code 상태 코드
+	 * @param message 추가 메시지
+	 */
 	ErrorCode(int httpStatus, int code, String message) {
 		this.httpStatus = httpStatus;
 		this.code = code;
@@ -35,11 +40,9 @@ public enum ErrorCode {
 	public int getHttpStatus() {
 		return httpStatus;
 	}
-
 	public int getCode() {
 		return code;
 	}
-
 	public String getMessage() {
 		return message;
 	}

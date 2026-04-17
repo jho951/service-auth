@@ -17,7 +17,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+	"SPRING_PROFILES_ACTIVE=dev",
+	"AUTH_JWT_SECRET=test-auth-jwt-secret-test-auth-jwt-secret"
+})
 @EnabledIfEnvironmentVariable(named = "RUN_REDIS_INTEGRATION_TESTS", matches = "true")
 class RedisIntegrationTests {
 

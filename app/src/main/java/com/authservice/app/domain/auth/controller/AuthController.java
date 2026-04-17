@@ -2,11 +2,6 @@ package com.authservice.app.domain.auth.controller;
 
 import com.authservice.app.domain.auth.entity.Auth;
 
-import com.auth.api.model.Tokens;
-import com.auth.core.service.AuthService;
-import com.auth.config.controller.RefreshCookieWriter;
-import com.auth.config.controller.RefreshTokenExtractor;
-
 import java.util.Optional;
 
 import jakarta.validation.Valid;
@@ -21,9 +16,13 @@ import org.slf4j.LoggerFactory;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
 import com.authservice.app.domain.auth.service.AuthRequestContext;
+import com.authservice.app.domain.auth.model.AuthTokens;
+import com.authservice.app.domain.auth.service.AuthLoginService;
 import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
 import com.authservice.app.domain.auth.sso.service.SsoCookieService;
+import com.authservice.app.domain.auth.support.RefreshCookieWriter;
+import com.authservice.app.domain.auth.support.RefreshTokenExtractor;
 import org.springframework.http.HttpHeaders;
 
 /** 인증 및 인가 처리 담당 컨트롤러입니다. */
@@ -31,7 +30,7 @@ public class AuthController {
 
 	private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-	private final AuthService authService;
+	private final AuthLoginService authService;
 	private final RefreshTokenExtractor refreshTokenExtractor;
 	private final RefreshCookieWriter refreshCookieWriter;
 	private final AuthAccountPolicyService authAccountPolicyService;
@@ -47,7 +46,7 @@ public class AuthController {
 	 * @param authLoginAttemptService  로그인 시도 이력을 기록하는 서비스
 	 */
 	public AuthController(
-		AuthService authService,
+		AuthLoginService authService,
 		RefreshTokenExtractor refreshTokenExtractor,
 		RefreshCookieWriter refreshCookieWriter,
 		AuthAccountPolicyService authAccountPolicyService,
@@ -76,7 +75,7 @@ public class AuthController {
 	public ResponseEntity<AuthResponse.TokenResponse> login(@Valid @RequestBody AuthRequest.LoginRequest req, HttpServletRequest request) {
 		AuthRequestContext context = AuthRequestContext.from(request);
 		try {
-			Tokens tokens = authService.login(req.getUsername(), req.getPassword());
+			AuthTokens tokens = authService.login(req.getUsername(), req.getPassword());
 			Optional<Auth> auth = authAccountPolicyService.markLoginSuccess(req.getUsername());
 			authLoginAttemptService.record(req.getUsername(), context, "SUCCESS");
 
@@ -87,8 +86,8 @@ public class AuthController {
 
 			return ResponseEntity.status(response.getStatusCode())
 				.headers(response.getHeaders())
-				.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.getAccessToken()))
-				.body(new AuthResponse.TokenResponse(tokens.getAccessToken(), tokens.getRefreshToken()));
+				.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.accessToken()))
+				.body(new AuthResponse.TokenResponse(tokens.accessToken(), tokens.refreshToken()));
 
 		} catch (RuntimeException ex) {
 			Optional<Auth> auth = authAccountPolicyService.markLoginFailure(req.getUsername());
@@ -112,7 +111,7 @@ public class AuthController {
 	@PostMapping("/refresh")
 	public ResponseEntity<AuthResponse.TokenResponse> refresh(HttpServletRequest request) {
 		String refreshToken = refreshTokenExtractor.extract(request);
-		Tokens tokens = authService.refresh(refreshToken);
+		AuthTokens tokens = authService.refresh(refreshToken);
 
 		ResponseEntity<Void> response = refreshCookieWriter.write(
 			tokens,
@@ -121,8 +120,8 @@ public class AuthController {
 
 		return ResponseEntity.status(response.getStatusCode())
 			.headers(response.getHeaders())
-			.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.getAccessToken()))
-			.body(new AuthResponse.TokenResponse(tokens.getAccessToken(), tokens.getRefreshToken()));
+			.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.accessToken()))
+			.body(new AuthResponse.TokenResponse(tokens.accessToken(), tokens.refreshToken()));
 	}
 
 	/**

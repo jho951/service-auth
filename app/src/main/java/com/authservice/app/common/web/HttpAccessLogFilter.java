@@ -7,13 +7,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.authservice.app.common.logging.LoggingMdcKeys;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class HttpAccessLogFilter extends OncePerRequestFilter {
 
 	private static final Logger log = LoggerFactory.getLogger(HttpAccessLogFilter.class);
@@ -26,12 +28,10 @@ public class HttpAccessLogFilter extends OncePerRequestFilter {
 			filterChain.doFilter(request, response);
 		} finally {
 			long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
-			log.info("HTTP {} {} status={} elapsedMs={} ip={} ua={}",
-				request.getMethod(),
-				request.getRequestURI(),
+			log.info("event=http_request_completed status={} elapsed_ms={} client_ip={} user_agent={}",
 				response.getStatus(),
 				elapsedMs,
-				resolveClientIp(request),
+				MDC.get(LoggingMdcKeys.CLIENT_IP),
 				request.getHeader("User-Agent")
 			);
 		}
@@ -47,13 +47,4 @@ public class HttpAccessLogFilter extends OncePerRequestFilter {
 		return true;
 	}
 
-	private String resolveClientIp(HttpServletRequest request) {
-		String xff = request.getHeader("X-Forwarded-For");
-		if (xff != null && !xff.isBlank()) {
-			int comma = xff.indexOf(',');
-			return comma > -1 ? xff.substring(0, comma).trim() : xff.trim();
-		}
-		String remoteAddr = request.getRemoteAddr();
-		return remoteAddr == null ? "unknown" : remoteAddr;
-	}
 }
