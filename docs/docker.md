@@ -126,7 +126,7 @@ networks:
 | `GITHUB_ACTOR` | 빈 값 | private GitHub Packages build 인증 사용자 |
 | `GITHUB_TOKEN` | 빈 값 | private GitHub Packages build 인증 토큰 |
 
-`GITHUB_ACTOR`와 `GITHUB_TOKEN`은 Docker build 단계에서 Gradle이 `platform-governance`, `platform-security` private package를 받을 때 필요합니다.
+`GITHUB_ACTOR`와 `GITHUB_TOKEN`은 Docker build 단계에서 Gradle이 `platform-governance`, `platform-security`, `platform-integrations` private package를 받을 때 필요합니다.
 
 `AUTH_ENV_FILE`은 스크립트가 Compose에 넘기는 내부 변수입니다. 직접 실행할 때만 override합니다.
 
