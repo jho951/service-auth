@@ -1,11 +1,13 @@
 [versions]
-spring-boot = "3.4.0"
+spring-boot = "3.5.13"
 spring-dependency-management = "1.1.6"
 springdoc = "2.8.14"
-junit-jupiter = "5.11.3"
-junit-platform = "1.11.3"
-platform-governance = "1.1.0"
-platform-security = "1.0.4"
+junit-jupiter = "5.12.2"
+junit-platform = "1.12.2"
+platform-governance = "2.0.0"
+platform-security = "2.0.0"
+platform-integrations = "1.0.0"
+auth = "3.0.1"
 ip-guard = "3.0.0"
 
 [libraries]
@@ -18,10 +20,15 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jun
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 springdoc-openapi = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 platform-governance-bom = { module = "io.github.jho951.platform:platform-governance-bom", version.ref = "platform-governance" }
-platform-governance-starter = { module = "io.github.jho951.platform:platform-governance-spring-boot-starter" }
+platform-governance-starter = { module = "io.github.jho951.platform:platform-governance-starter" }
 platform-security-bom = { module = "io.github.jho951.platform:platform-security-bom", version.ref = "platform-security" }
-platform-security-issuer-starter = { module = "io.github.jho951.platform:platform-security-issuer-starter", version.ref = "platform-security" }
+platform-security-starter = { module = "io.github.jho951.platform:platform-security-starter", version.ref = "platform-security" }
+platform-security-auth = { module = "io.github.jho951.platform:platform-security-auth" }
 platform-security-test-support = { module = "io.github.jho951.platform:platform-security-test-support", version.ref = "platform-security" }
+platform-security-governance-bridge = { module = "io.github.jho951.platform:platform-security-governance-bridge", version.ref = "platform-integrations" }
+auth-core = { module = "io.github.jho951:auth-core", version.ref = "auth" }
+auth-session = { module = "io.github.jho951:auth-session", version.ref = "auth" }
+auth-hybrid = { module = "io.github.jho951:auth-hybrid", version.ref = "auth" }
 ip-guard-core = { module = "io.github.jho951:ip-guard-core", version.ref = "ip-guard" }
 
 [plugins]

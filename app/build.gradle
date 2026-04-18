@@ -27,7 +27,12 @@ dependencies {
     implementation platform(libs.platform.governance.bom)
     implementation libs.platform.governance.starter
     implementation platform(libs.platform.security.bom)
-    implementation libs.platform.security.issuer.starter
+    implementation libs.platform.security.starter
+    implementation libs.platform.security.auth
+    implementation libs.platform.security.governance.bridge
+    implementation libs.auth.core
+    implementation libs.auth.session
+    implementation libs.auth.hybrid
     implementation libs.ip.guard.core
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'

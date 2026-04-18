@@ -60,10 +60,12 @@ Repository는 `settings.gradle`의 `dependencyResolutionManagement`에서 중앙
 - Maven Central
 - GitHub Packages: `https://maven.pkg.github.com/jho951/platform-governance`
 - GitHub Packages: `https://maven.pkg.github.com/jho951/platform-security`
+- GitHub Packages: `https://maven.pkg.github.com/jho951/platform-integrations`
 
-`platform-governance`와 `platform-security`는 private package이므로 인증값이 필요합니다.
-현재 기준 버전은 `platform-governance` `1.1.0`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
-현재 기준 버전은 `platform-security` `1.0.4`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
+`platform-governance`, `platform-security`, `platform-integrations`는 private package이므로 인증값이 필요합니다.
+현재 기준 버전은 `platform-governance` `2.0.0`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
+현재 기준 버전은 `platform-security` `2.0.0`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
+현재 기준 버전은 `platform-integrations` `1.0.0`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
 
 로컬 shell:
 
@@ -89,7 +91,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 ```
 
-`GH_PACKAGES_TOKEN`에는 `platform-governance`, `platform-security` package read 권한이 필요합니다.
+`GH_PACKAGES_TOKEN`에는 `platform-governance`, `platform-security`, `platform-integrations` package read 권한이 필요합니다.
 
 ## CI workflow
 

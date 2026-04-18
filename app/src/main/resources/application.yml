@@ -66,6 +66,13 @@ platform:
     enabled: ${PLATFORM_GOVERNANCE_ENABLED:true}
     audit:
       enabled: ${PLATFORM_GOVERNANCE_AUDIT_ENABLED:true}
+      service-name: ${PLATFORM_GOVERNANCE_AUDIT_SERVICE_NAME:${spring.application.name}}
+      environment: ${PLATFORM_GOVERNANCE_AUDIT_ENVIRONMENT:${SPRING_PROFILES_ACTIVE:local}}
+      failure-policy: ${PLATFORM_GOVERNANCE_AUDIT_FAILURE_POLICY:FAIL_CLOSED}
+      identity:
+        enabled: ${PLATFORM_GOVERNANCE_AUDIT_IDENTITY_ENABLED:true}
+        validation-enabled: ${PLATFORM_GOVERNANCE_AUDIT_IDENTITY_VALIDATION_ENABLED:true}
+        fail-on-validation-error: ${PLATFORM_GOVERNANCE_AUDIT_IDENTITY_FAIL_ON_VALIDATION_ERROR:true}
     plugin-policy-engine:
       store: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_STORE:MEMORY}
       file-path: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_FILE_PATH:}
@@ -82,10 +89,17 @@ platform:
       allow-non-strict-engine-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_NON_STRICT_ENGINE_IN_PRODUCTION:false}
       allow-permissive-violation-action-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_PERMISSIVE_VIOLATION_ACTION_IN_PRODUCTION:false}
       require-audit-sink-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_AUDIT_SINK_IN_PRODUCTION:true}
+      require-audit-context-resolver-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_AUDIT_CONTEXT_RESOLVER_IN_PRODUCTION:true}
+      require-audit-service-identity-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_AUDIT_SERVICE_IDENTITY_IN_PRODUCTION:true}
+      require-identity-audit-validation-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_IDENTITY_AUDIT_VALIDATION_IN_PRODUCTION:true}
       require-policy-config-in-enforcing-mode: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_POLICY_CONFIG_IN_ENFORCING_MODE:true}
       require-fatal-handler-failures-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_FATAL_HANDLER_FAILURES_IN_PRODUCTION:true}
+      allow-ignore-audit-failure-policy-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_IGNORE_AUDIT_FAILURE_POLICY_IN_PRODUCTION:false}
   security:
     enabled: true
+    service-role-preset: ISSUER
+    audit:
+      mode: ${PLATFORM_SECURITY_AUDIT_MODE:DENY_AND_ADMIN}
     boundary:
       public-paths:
         - /
@@ -119,7 +133,7 @@ platform:
       default-mode: HYBRID
       allow-session-for-browser: true
       allow-bearer-for-api: true
-      internal-token-enabled: true
+      internal-token-enabled: ${PLATFORM_SECURITY_INTERNAL_TOKEN_ENABLED:false}
       jwt-secret: ${AUTH_JWT_SECRET}
       access-token-ttl: PT20M
       refresh-token-ttl: PT30000S

@@ -9,7 +9,7 @@ dependencyResolutionManagement {
 	repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 	repositories {
 		mavenCentral()
-		['platform-governance', 'platform-security'].each { repoName ->
+		['platform-governance', 'platform-security', 'platform-integrations'].each { repoName ->
 			maven {
 				url = uri("https://maven.pkg.github.com/jho951/${repoName}")
 				if (githubPackagesUsername.present && githubPackagesToken.present) {
