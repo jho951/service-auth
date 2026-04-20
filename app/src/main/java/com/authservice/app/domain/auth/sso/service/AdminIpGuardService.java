@@ -1,7 +1,7 @@
 package com.authservice.app.domain.auth.sso.service;
 
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.sso.config.SsoProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;

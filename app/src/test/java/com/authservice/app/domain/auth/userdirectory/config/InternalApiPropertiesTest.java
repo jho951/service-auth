@@ -3,7 +3,7 @@ package com.authservice.app.domain.auth.userdirectory.config;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.exception.GlobalException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

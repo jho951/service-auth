@@ -1,6 +1,6 @@
 package com.authservice.app.domain.auth.controller;
 
-import com.authservice.app.common.logging.SensitiveDataMasker;
+import com.authservice.common.logging.SensitiveDataMasker;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
 import com.authservice.app.domain.audit.service.AuthAuditLogService;

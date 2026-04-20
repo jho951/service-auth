@@ -1,7 +1,7 @@
 package com.authservice.app.domain.auth.support;
 
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,7 +1,7 @@
 package com.authservice.app.security;
 
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.model.AuthPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

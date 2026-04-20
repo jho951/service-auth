@@ -1,6 +1,6 @@
 package com.authservice.app.domain.auth.dto;
 
-import com.authservice.app.common.base.dto.BaseResponse;
+import com.authservice.common.base.dto.BaseResponse;
 
 /**
  * 인증 관련 응답 DTO들을 관리하는 컨테이너 클래스입니다.

@@ -2,7 +2,6 @@ package com.authservice.app.domain.auth.sso.service;
 
 import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import com.authservice.app.domain.auth.sso.config.SsoProperties;
-import com.authservice.app.domain.auth.sso.model.GithubUserProfile;
 import com.authservice.app.domain.auth.sso.model.SsoPageType;
 import com.authservice.app.domain.auth.sso.model.SsoPrincipal;
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoSessionPayload;
@@ -17,8 +16,8 @@ import com.authservice.app.domain.auth.service.AuthLoginService;
 import com.authservice.app.domain.auth.service.AuthRedisRefreshTokenStore;
 import com.authservice.app.domain.audit.service.AuthAuditLogService;
 import com.authservice.app.security.AuthJwtTokenService;
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.userdirectory.service.UserDirectory;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;

@@ -1,7 +1,7 @@
 package com.authservice.app.domain.auth.internal.controller;
 
-import com.authservice.app.common.base.constant.SuccessCode;
-import com.authservice.app.common.base.dto.GlobalResponse;
+import com.authservice.common.base.constant.SuccessCode;
+import com.authservice.common.base.dto.GlobalResponse;
 import com.authservice.app.domain.auth.internal.dto.InternalAuthRequest;
 import com.authservice.app.domain.auth.internal.dto.InternalAuthResponse;
 import com.authservice.app.domain.auth.internal.service.InternalAuthAccountService;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.authservice.app.common.swagger.constant.SwaggerTag;
+import com.authservice.common.swagger.constant.SwaggerTag;
 
 @RestController
 @RequestMapping("/internal/auth/accounts")

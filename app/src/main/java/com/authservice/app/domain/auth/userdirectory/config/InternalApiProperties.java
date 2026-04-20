@@ -1,7 +1,7 @@
 package com.authservice.app.domain.auth.userdirectory.config;
 
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.exception.GlobalException;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;

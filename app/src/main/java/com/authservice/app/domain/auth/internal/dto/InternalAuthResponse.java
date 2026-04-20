@@ -1,6 +1,6 @@
 package com.authservice.app.domain.auth.internal.dto;
 
-import com.authservice.app.common.base.dto.BaseResponse;
+import com.authservice.common.base.dto.BaseResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.UUID;
 import lombok.AllArgsConstructor;

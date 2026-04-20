@@ -1,7 +1,7 @@
 package com.authservice.app.domain.auth.userdirectory.service;
 
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.userdirectory.config.UserServiceProperties;
 import com.authservice.app.domain.auth.userdirectory.model.OAuth2ProvisionCommand;
 import com.authservice.app.domain.auth.userdirectory.model.UserAccountProfile;

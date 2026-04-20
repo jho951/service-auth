@@ -1,7 +1,7 @@
 package com.authservice.app.domain.auth.internal.service;
 
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.exception.GlobalException;
 import com.authservice.app.domain.audit.service.AuthAuditLogService;
 import com.authservice.app.domain.auth.entity.Auth;
 import com.authservice.app.domain.auth.internal.dto.InternalAuthRequest;

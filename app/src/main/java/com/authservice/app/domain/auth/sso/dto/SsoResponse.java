@@ -1,6 +1,6 @@
 package com.authservice.app.domain.auth.sso.dto;
 
-import com.authservice.app.common.base.dto.BaseResponse;
+import com.authservice.common.base.dto.BaseResponse;
 import java.util.List;
 
 public class SsoResponse {

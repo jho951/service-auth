@@ -1,7 +1,7 @@
 package com.authservice.app.security;
 
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.dto.GlobalResponse;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.dto.GlobalResponse;
 import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import com.authservice.app.domain.auth.sso.config.SsoProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;

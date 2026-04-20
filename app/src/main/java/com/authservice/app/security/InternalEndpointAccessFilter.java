@@ -1,8 +1,8 @@
 package com.authservice.app.security;
 
-import com.authservice.app.common.base.constant.ErrorCode;
-import com.authservice.app.common.base.dto.GlobalResponse;
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.constant.ErrorCode;
+import com.authservice.common.base.dto.GlobalResponse;
+import com.authservice.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.userdirectory.config.InternalApiProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;

@@ -3,12 +3,11 @@ package com.authservice.app.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.authservice.app.common.base.exception.GlobalException;
+import com.authservice.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import com.authservice.app.domain.auth.model.AuthPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;

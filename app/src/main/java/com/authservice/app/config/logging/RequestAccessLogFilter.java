@@ -1,6 +1,6 @@
 package com.authservice.app.config.logging;
 
-import com.authservice.app.common.logging.LoggingMdcKeys;
+import com.authservice.common.logging.LoggingMdcKeys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

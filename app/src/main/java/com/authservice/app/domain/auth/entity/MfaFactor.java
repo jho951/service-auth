@@ -1,6 +1,6 @@
 package com.authservice.app.domain.auth.entity;
 
-import com.authservice.app.common.base.entity.BaseEntity;
+import com.authservice.common.base.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
