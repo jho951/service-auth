@@ -2,7 +2,7 @@ aws_region   = "ap-northeast-2"
 project_name = "msa"
 environment  = "prod"
 
-service_name         = "auth-server"
+service_name         = "auth-service"
 service_runtime_name = "auth-service"
 service_role         = "app-service"
 

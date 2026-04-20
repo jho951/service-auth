@@ -1,5 +1,7 @@
 package com.authservice.app.security;
 
+import com.authservice.app.common.base.constant.ErrorCode;
+import com.authservice.app.common.base.dto.GlobalResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,7 +14,6 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Map;
 
 @Component
 public class RestAuthHandlers {
@@ -32,7 +33,7 @@ public class RestAuthHandlers {
 				e.getMessage());
 			res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 			res.setContentType(MediaType.APPLICATION_JSON_VALUE);
-			new ObjectMapper().writeValue(res.getOutputStream(), Map.of("error", "Unauthorized"));
+			new ObjectMapper().writeValue(res.getOutputStream(), GlobalResponse.fail(ErrorCode.UNAUTHORIZED));
 		}
 	}
 
@@ -42,7 +43,7 @@ public class RestAuthHandlers {
 		public void handle(HttpServletRequest req, HttpServletResponse res, AccessDeniedException e) throws IOException {
 			res.setStatus(HttpServletResponse.SC_FORBIDDEN);
 			res.setContentType(MediaType.APPLICATION_JSON_VALUE);
-			new ObjectMapper().writeValue(res.getOutputStream(), Map.of("error", "Forbidden"));
+			new ObjectMapper().writeValue(res.getOutputStream(), GlobalResponse.fail(ErrorCode.FORBIDDEN));
 		}
 	}
 

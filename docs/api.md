@@ -1,25 +1,26 @@
-# Auth API
+# auth-service API
 
 ## 한눈에 보기
 
 ```txt
 Client
   -> Gateway public route: /v1/auth/*
-  -> Auth-service upstream: /auth/*
+  -> auth-service upstream: /auth/*
 ```
 
-Auth-service does not own public API version prefixes.
-Gateway maps public `/v1/auth/*` routes to auth-service `/auth/*` routes.
+auth-service는 public API version prefix를 소유하지 않습니다.
+
+Gateway는 public `/v1/...` route를 auth-service upstream route로 전달하기 전에 `/v1` prefix를 제거합니다.
 
 | 구분 | 경로 | 소유자 | 설명 |
 | --- | --- | --- | --- |
 | Public auth route | `/v1/auth/*`, `/v2/auth/*` | Gateway | 외부 client가 호출하는 versioned route |
-| Auth upstream route | `/auth/*` | Auth-service | Gateway가 전달하는 인증 route |
+| auth-service upstream route | `/auth/*` | auth-service | Gateway가 전달하는 인증 route |
 | OAuth callback public route | `/v1/login/oauth2/code/github` | Gateway | GitHub App에 등록하는 callback URL |
-| OAuth callback upstream route | `/login/oauth2/code/github` | Auth-service | Spring Security OAuth callback |
-| Internal account route | `/internal/auth/accounts/*` | Auth-service | User-service 연동용 계정 route |
-| Runtime route | `/` | Auth-service | 상태 확인 |
-| Discovery route | `/.well-known/jwks.json` | Auth-service | JWT 공개키 |
+| OAuth callback upstream route | `/login/oauth2/code/github` | auth-service | Spring Security OAuth callback |
+| Internal account route | `/internal/auth/accounts/*` | auth-service | User-service 연동용 계정 route |
+| Runtime route | `/` | auth-service | 상태 확인 |
+| Discovery route | `/.well-known/jwks.json` | auth-service | JWT 공개키 |
 
 ## Endpoint
 
@@ -198,7 +199,7 @@ GET /v1/login/oauth2/code/github
   -> GET /login/oauth2/code/github
 ```
 
-Auth-service는 `/v1/login/oauth2/**`를 구현하지 않는다.
+auth-service는 `/v1/login/oauth2/**`를 구현하지 않는다.
 
 ### `GET /auth/oauth/github/callback`
 
@@ -281,7 +282,7 @@ Response:
 
 ### `POST /internal/auth/accounts`
 
-User-service가 사용자 생성 이후 Auth-service 계정을 만들 때 호출한다.
+User-service가 사용자 생성 이후 auth-service 계정을 만들 때 호출한다.
 요청은 internal route로 분류되며 `X-Internal-Request-Secret` 또는 `Authorization: Bearer <internal-key>`가 필요하다.
 
 | Field | Type | Required | Description |
@@ -318,7 +319,7 @@ Response:
 
 ### `DELETE /internal/auth/accounts/{userId}`
 
-User-service 계정 삭제 또는 rollback 시 Auth-service 계정을 제거한다.
+User-service 계정 삭제 또는 rollback 시 auth-service 계정을 제거한다.
 요청은 internal route로 분류되며 `X-Internal-Request-Secret` 또는 `Authorization: Bearer <internal-key>`가 필요하다.
 
 | Path variable | Type | Description |
@@ -373,17 +374,17 @@ Notes:
 
 - RSA 계열 알고리즘과 public key가 설정되어 있을 때 key를 반환한다.
 - RSA가 아니거나 public key가 없으면 `keys: []`를 반환한다.
-- Gateway는 이 공개키로 Auth-service JWT 서명을 검증할 수 있다.
+- Gateway는 이 공개키로 auth-service JWT 서명을 검증할 수 있다.
 
 ## Response Policy
 
 | API group | Success response | Error response |
 | --- | --- | --- |
-| Token | plain JSON body + cookies | `AuthErrorResponse` |
-| SSO start/callback | redirect | `AuthErrorResponse` |
-| SSO exchange/logout | `204 No Content` + cookies | `AuthErrorResponse` |
-| Session | plain JSON body | `AuthErrorResponse` 또는 unauthenticated session body |
-| Internal account | `GlobalResponse` | `AuthErrorResponse` |
+| Token | plain JSON body + cookies | `GlobalResponse` error |
+| SSO start/callback | redirect | `GlobalResponse` error |
+| SSO exchange/logout | `204 No Content` + cookies | `GlobalResponse` error |
+| Session | plain JSON body | `GlobalResponse` error 또는 unauthenticated session body |
+| Internal account | `GlobalResponse` | `GlobalResponse` error |
 | Runtime/JWKS | plain JSON body | default error handling |
 
-Gateway는 public 응답을 표준화할 수 있지만, Auth-service 내부 운영 기록은 Auth-service 원형 error code를 기준으로 한다.
+Gateway는 public 응답을 표준화할 수 있지만, auth-service 내부 운영 기록은 auth-service 원형 error code를 기준으로 한다.

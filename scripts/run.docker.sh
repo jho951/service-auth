@@ -4,6 +4,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_PROJECT_NAME="auth-service"
+BASE_COMPOSE_FILE="$PROJECT_ROOT/docker/compose.yml"
 
 ACTION=${1:-up}
 ENV=${2:-dev}
@@ -37,7 +38,7 @@ esac
 
 case "$ENV" in
   dev|prod)
-    COMPOSE_FILE="$PROJECT_ROOT/docker/$ENV/compose.yml"
+    ENV_COMPOSE_FILE="$PROJECT_ROOT/docker/$ENV/compose.yml"
     ;;
   *)
     echo "Invalid env: $ENV"
@@ -46,15 +47,21 @@ case "$ENV" in
     ;;
 esac
 
-if [[ ! -f "$COMPOSE_FILE" ]]; then
-  echo "Compose file not found: $COMPOSE_FILE"
+if [[ ! -f "$BASE_COMPOSE_FILE" ]]; then
+  echo "Base Compose file not found: $BASE_COMPOSE_FILE"
+  exit 1
+fi
+
+if [[ ! -f "$ENV_COMPOSE_FILE" ]]; then
+  echo "Compose file not found: $ENV_COMPOSE_FILE"
   exit 1
 fi
 
 echo "Environment: $ENV"
 echo "Target: $TARGET"
 echo "Action: $ACTION"
-echo "Using Docker Compose file: $COMPOSE_FILE"
+echo "Using base Docker Compose file: $BASE_COMPOSE_FILE"
+echo "Using env Docker Compose file: $ENV_COMPOSE_FILE"
 
 prepare_env_file() {
   local env="$1"
@@ -88,11 +95,11 @@ if [[ "$ACTION" == "up" ]]; then
   SHARED_NETWORK="${SHARED_SERVICE_NETWORK:-${BACKEND_SHARED_NETWORK:-${SERVICE_SHARED_NETWORK:-service-backbone-shared}}}"
   ensure_network "$SHARED_NETWORK"
   AUTH_ENV_FILE="$COMPOSE_ENV_FILE" SHARED_SERVICE_NETWORK="$SHARED_NETWORK" BACKEND_SHARED_NETWORK="$SHARED_NETWORK" SERVICE_SHARED_NETWORK="$SHARED_NETWORK" \
-    docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" up --build -d
+    docker compose -p "$COMPOSE_PROJECT_NAME" -f "$BASE_COMPOSE_FILE" -f "$ENV_COMPOSE_FILE" up --build -d
 else
   if [[ "$ENV" == "dev" ]]; then
-    AUTH_ENV_FILE="$COMPOSE_ENV_FILE" docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" down --remove-orphans -v
+    AUTH_ENV_FILE="$COMPOSE_ENV_FILE" docker compose -p "$COMPOSE_PROJECT_NAME" -f "$BASE_COMPOSE_FILE" -f "$ENV_COMPOSE_FILE" down --remove-orphans -v
   else
-    AUTH_ENV_FILE="$COMPOSE_ENV_FILE" docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" down --remove-orphans
+    AUTH_ENV_FILE="$COMPOSE_ENV_FILE" docker compose -p "$COMPOSE_PROJECT_NAME" -f "$BASE_COMPOSE_FILE" -f "$ENV_COMPOSE_FILE" down --remove-orphans
   fi
 fi

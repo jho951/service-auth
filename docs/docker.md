@@ -1,11 +1,11 @@
-# Auth Docker
+# auth-service Docker
 
 ## Compose 파일
 
 | 환경 | Compose 파일 | env 파일 | Spring 프로필 |
 | --- | --- | --- | --- |
-| `dev` | `docker/dev/compose.yml` | `.env.dev` | `dev` |
-| `prod` | `docker/prod/compose.yml` | `.env.prod` | `prod` |
+| `dev` | `docker/compose.yml` + `docker/dev/compose.yml` | `.env.dev` | `dev` |
+| `prod` | `docker/compose.yml` + `docker/prod/compose.yml` | `.env.prod` | `prod` |
 
 실행:
 
@@ -32,6 +32,7 @@ db
 └── schema.sql
 docker
 ├── Dockerfile
+├── compose.yml
 ├── dev
 │   ├── compose.yml
 │   └── services
@@ -46,7 +47,7 @@ docker
             └── my.cnf
 ```
 
-`docker/Dockerfile`은 dev/prod가 공유합니다. Compose와 service config는 `docker/{env}` 아래에 둡니다.
+`docker/Dockerfile`과 `docker/compose.yml`은 dev/prod가 공유합니다. 환경별 Compose override와 service config는 `docker/{env}` 아래에 둡니다.
 
 ## env 파일 결정
 
@@ -98,7 +99,7 @@ service-backbone-shared
 
 결정된 네트워크가 없으면 스크립트가 `docker network create`로 external network를 먼저 생성합니다.
 
-Compose 파일에서는 아래 값으로 external network를 참조합니다.
+공통 Compose 파일에서는 아래 값으로 external network를 참조합니다.
 
 ```yaml
 networks:
@@ -166,7 +167,7 @@ db/schema.sql
   mfa_factors
 ```
 
-Compose는 repo 루트의 `db/schema.sql`을 MySQL 컨테이너의 `/schema/auth-schema.sql`로 read-only mount합니다. 테이블 DDL은 `db/schema.sql`만 수정하고, Docker init SQL에 복사하지 않습니다.
+공통 Compose는 repo 루트의 `db/schema.sql`을 MySQL 컨테이너의 `/schema/auth-schema.sql`로 read-only mount합니다. 환경별 Compose override는 `docker/{dev,prod}/services/mysql` 아래의 `my.cnf`와 `init.sql`만 추가로 mount합니다. 테이블 DDL은 `db/schema.sql`만 수정하고, Docker init SQL에 복사하지 않습니다.
 
 `dev down`은 `--remove-orphans -v`를 사용하므로 named volume도 삭제됩니다.
 
@@ -207,13 +208,13 @@ docker network inspect service-backbone-shared
 컨테이너 상태 확인:
 
 ```bash
-docker compose -p auth-service -f docker/dev/compose.yml ps
+docker compose -p auth-service -f docker/compose.yml -f docker/dev/compose.yml ps
 ```
 
 로그 확인:
 
 ```bash
-docker compose -p auth-service -f docker/dev/compose.yml logs -f auth-service
+docker compose -p auth-service -f docker/compose.yml -f docker/dev/compose.yml logs -f auth-service
 ```
 
 DB healthcheck가 실패하면 먼저 `.env.dev` 또는 `.env.prod`의 MySQL 값과 `auth-mysql` 로그를 확인합니다.
@@ -221,7 +222,7 @@ DB healthcheck가 실패하면 먼저 `.env.dev` 또는 `.env.prod`의 MySQL 값
 ## 변경 규칙
 
 - 새 서비스가 auth DB에 직접 접근해야 한다면 먼저 구조를 재검토합니다. 기본 정책은 auth DB direct access 금지입니다.
-- Compose 파일은 `docker/dev/compose.yml`, `docker/prod/compose.yml`을 기준으로 변경합니다.
+- 공통 Compose 설정은 `docker/compose.yml`, 환경별 override는 `docker/dev/compose.yml`, `docker/prod/compose.yml`을 기준으로 변경합니다.
 - auth 테이블 schema는 `db/schema.sql`만 수정합니다. Docker `init.sql`에는 테이블 DDL을 중복 작성하지 않습니다.
 - `.env.dev`/`.env.prod` 기본값을 바꾸면 `docker/{dev,prod}/compose.yml`과 이 문서를 같이 확인합니다.
 - 공유 네트워크 이름을 바꾸면 gateway, user-service, 중앙 Redis Compose 설정도 함께 맞춰야 합니다.

@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
-  title: Auth Service Upstream API 문서
+  title: auth-service Upstream API 문서
   version: 1.0.0
   description: |
     Local copy of service-contract/contracts/openapi/auth-service.upstream.v1.yaml.
-    이 문서는 Auth-service upstream route만 설명합니다.
+    이 문서는 auth-service upstream route만 설명합니다.
     Public /v1 route는 Gateway contract가 소유합니다.
     이 서비스는 로그인, 토큰 갱신, 로그아웃, GitHub SSO, 세션 검증, 내부 auth account 관리를 제공합니다.
 servers:
@@ -113,6 +113,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /auth/logout:
     post:
@@ -120,10 +122,6 @@ paths:
       summary: 로그아웃
       operationId: logout
       description: refresh token 또는 session이 있으면 폐기하고 인증 cookie를 삭제합니다.
-      security:
-        - bearerAuth: []
-        - accessTokenCookie: []
-        - ssoSessionCookie: []
       responses:
         '204':
           description: 로그아웃이 성공했고 cookie가 삭제되었습니다.
@@ -134,8 +132,8 @@ paths:
                 type: string
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /auth/sso/start:
     get:
@@ -277,11 +275,7 @@ paths:
       operationId: validateInternalSession
       security:
         - internalApiKey: []
-          bearerAuth: []
-        - internalApiKey: []
-          accessTokenCookie: []
-        - internalApiKey: []
-          ssoSessionCookie: []
+        - internalBearerKey: []
       parameters:
         - $ref: '#/components/parameters/InternalSecret'
       responses:
@@ -292,11 +286,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/InternalSessionValidationResponse'
         '401':
-          description: 인증된 session이 아닙니다.
+          description: internal caller proof가 없거나, 인증된 auth session이 아닙니다.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InternalSessionValidationResponse'
+                oneOf:
+                  - $ref: '#/components/schemas/InternalSessionValidationResponse'
+                  - $ref: '#/components/schemas/VoidGlobalResponse'
 
   /auth/session:
     get:
@@ -347,7 +343,7 @@ paths:
       operationId: createInternalAuthAccount
       security:
         - internalApiKey: []
-        - bearerAuth: []
+        - internalBearerKey: []
       parameters:
         - $ref: '#/components/parameters/InternalSecret'
       requestBody:
@@ -377,7 +373,7 @@ paths:
       operationId: deleteInternalAuthAccount
       security:
         - internalApiKey: []
-        - bearerAuth: []
+        - internalBearerKey: []
       parameters:
         - $ref: '#/components/parameters/InternalSecret'
         - name: userId
@@ -416,6 +412,11 @@ components:
       type: apiKey
       in: header
       name: X-Internal-Request-Secret
+    internalBearerKey:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: "`Bearer <internal-key>` 형식의 internal caller proof입니다."
 
   parameters:
     Page:

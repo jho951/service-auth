@@ -1,4 +1,4 @@
-# Auth DB
+# auth-service DB
 
 이 문서는 DB 스키마를 변경할 때 확인해야 하는 구현 기준입니다.
 

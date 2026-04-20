@@ -1,4 +1,4 @@
 /**
- * Auth-service audit event adapters.
+ * auth-service audit event adapters.
  */
 package com.authservice.app.domain.audit;

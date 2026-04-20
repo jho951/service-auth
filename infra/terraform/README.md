@@ -1,4 +1,4 @@
-# auth-server Terraform
+# auth-service Terraform
 
 This stack follows the MSA Terraform contract and provisions an ECS/Fargate Blue/Green deployment baseline.
 
@@ -90,7 +90,7 @@ Required GitHub vars when Terraform defaults are changed:
 - `CODEDEPLOY_APPLICATION_NAME`
 - `CODEDEPLOY_DEPLOYMENT_GROUP_NAME`
 
-The workflow defaults match this stack's default `prod-auth-server` resource names. If Terraform uses a remote backend, these values can be automated from outputs later. Until then, keep GitHub vars in sync with Terraform outputs.
+The workflow defaults match this stack's default `prod-auth-service` resource names. If Terraform uses a remote backend, these values can be automated from outputs later. Until then, keep GitHub vars in sync with Terraform outputs.
 
 The assumed role needs permission to push to the service ECR repository, describe the current ECS service and task definition, register a new ECS task definition revision, pass the existing task and execution roles, and create/read CodeDeploy deployments.
 

@@ -1,24 +1,26 @@
 contract:
-  repo: https://github.com/jho951/contract
+  repo: https://github.com/jho951/service-contract
   ref: main
   commit: 12dc214ed7e0c9c2290add6972cd35be13634743
 
 service:
-  name: auth
+  name: auth-service
   branch: main
   role: backend-service
   consumes:
-    - contracts/common/routing.md
-    - contracts/common/headers.md
-    - contracts/common/security.md
-    - contracts/common/errors.md
-    - contracts/common/auth-channel-policy.md
-    - contracts/auth/**
-    - contracts/user/**
-    - contracts/openapi/auth-service.upstream.v1.yaml
-    - contracts/openapi/auth-public.gateway.v1.yaml
+    - shared/routing.md
+    - shared/headers.md
+    - shared/security.md
+    - shared/errors.md
+    - shared/auth-channel-policy.md
+    - shared/ci-cd.md
+    - repositories/auth-service/**
+    - repositories/user-service/**
+    - artifacts/openapi/auth-service.upstream.v1.yaml
+    - artifacts/openapi/auth-public.gateway.v1.yaml
 
 validation:
+  contract_lock: true
   openapi: true
   schema: true
   routing: true
@@ -26,6 +28,29 @@ validation:
   errors: true
   security: true
 
+ci:
+  profile: spring-boot
+  runtime: java
+  java_version: "17"
+  setup: gradle
+  test_command: ./gradlew --no-daemon clean test
+  build_command: ./gradlew --no-daemon :app:bootJar -x test
+  docker: true
+  contract_check: true
+
+cd:
+  profile: ec2-compose
+  target: ec2
+  strategy: docker-compose
+  environments:
+    - dev
+    - prod
+  image_registry: ghcr.io
+  deploy_on: protected_branch
+  health_check: true
+  smoke_test: true
+
 notes:
-  owner: auth
+  owner: auth-service
   automation_level: guardrail
+  legacy_sync_doc: false

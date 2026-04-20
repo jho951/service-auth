@@ -1,12 +1,11 @@
-# Auth-server 구조
+# auth-service 구조
 
 ## 계약 기준
 
 - 공통 계약 레포: `https://github.com/jho951/contract`
-- 보안 플랫폼 레포: `https://github.com/jho951/platform-security`
-- 이 서비스의 구현 기준 브랜치: `Auth-server` `main`
+- Docker service, gateway upstream, metric tag, 감사 로그 service name은 `auth-service`를 기준으로 합니다.
 - 서비스 간 책임, API 계약, 이벤트 계약, 공통 identity header 계약은 contract 레포를 기준으로 합니다.
-- 이 문서는 contract를 반복 정의하지 않고, Auth-server 내부 구현 배치 기준만 다룹니다.
+- 이 문서는 contract를 반복 정의하지 않고, auth-service 내부 구현 배치 기준만 다룹니다.
 - 인터페이스 변경 시 본 저장소 구현보다 계약 레포 변경을 먼저 반영합니다.
 
 ## 모듈 경계
@@ -24,16 +23,17 @@
 
 `app/src/main/java/com/authservice/app`
 
-| 패키지 | 로컬 역할 |
-| --- | --- |
-| `common.web` | 서비스 공통 HTTP endpoint와 servlet filter |
-| `domain.auth` | 이메일/비밀번호 인증, refresh rotation, auth account persistence |
-| `domain.auth.internal` | 내부 서비스 간 인증 API |
-| `domain.auth.sso` | OAuth/SSO 시작, callback, ticket exchange, SSO cookie/session |
-| `domain.auth.userdirectory` | user-service 원격 사용자 디렉토리 연동 |
-| `domain.auth.support` | auth 도메인 내부에서 재사용하는 HTTP/cookie/token/UUID helper |
-| `domain.audit` | auth-service 감사 이벤트 기록 어댑터 |
-| `security` | Spring Security와 `platform-security` 연결 |
+| 패키지                         | 로컬 역할                                                       |
+|-----------------------------|-------------------------------------------------------------|
+| `config.logging`            | 요청 MDC와 access log filter                                   |
+| `config.status`             | 런타임 상태 endpoint                                             |
+| `domain.auth`               | 이메일/비밀번호 인증, refresh rotation, auth account persistence     |
+| `domain.auth.internal`      | 내부 서비스 간 인증 API                                             |
+| `domain.auth.sso`           | OAuth/SSO 시작, callback, ticket exchange, SSO cookie/session |
+| `domain.auth.userdirectory` | user-service 원격 사용자 디렉토리 연동                                 |
+| `domain.auth.support`       | auth 도메인 내부에서 재사용하는 HTTP/cookie/token/UUID helper           |
+| `domain.audit`              | auth-service 감사 이벤트 기록 어댑터                                  |
+| `security`                  | Spring Security와 `platform-security` 연결                     |
 
 `common/src/main/java/com/authservice/app/common`
 
@@ -43,6 +43,7 @@
 | `logging` | 요청 MDC, access log, 민감정보 마스킹 |
 | `redis` | Redis connection 설정 |
 | `swagger` | OpenAPI/Swagger 설정 |
+| `web` | 공통 오류 endpoint |
 
 ## 의존 방향
 
@@ -52,7 +53,7 @@
 - Controller는 request/response 변환과 흐름 위임만 담당하고, 판단은 service에 위임합니다.
 - `domain.auth.userdirectory`가 user-service client 경계를 소유합니다. 다른 auth 패키지는 새 user-service client를 만들지 말고 `UserDirectory`를 호출합니다.
 - `security`는 filter, token service, `platform-security` 연결을 담당합니다. 도메인 service는 Spring Security 설정 클래스를 import하지 않습니다.
-- Auth-server는 provider OAuth2 login flow를 도메인 계층에 두고, identity 검증 이후 platform bridge/capability 계약을 사용합니다.
+- auth-service는 provider OAuth2 login flow를 도메인 계층에 두고, identity 검증 이후 platform bridge/capability 계약을 사용합니다.
 
 ## 코드 배치 규칙
 

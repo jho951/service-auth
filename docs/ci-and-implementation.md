@@ -5,7 +5,7 @@
 Gradle 루트는 멀티모듈 집계 프로젝트입니다.
 
 ```text
-Auth-server
+auth-service
 ├── app
 └── common
 ```
@@ -139,15 +139,15 @@ GitHub repository/environment vars:
 | 이름 | 기본값 | 설명 |
 | --- | --- | --- |
 | `AWS_REGION` | `ap-northeast-2` | AWS region |
-| `ECR_REPOSITORY_NAME` | `prod-auth-server` | Terraform ECR repository name |
-| `ECS_CLUSTER_NAME` | `prod-auth-server-cluster` | ECS cluster name |
-| `ECS_SERVICE_NAME` | `prod-auth-server` | ECS service name |
+| `ECR_REPOSITORY_NAME` | `prod-auth-service` | Terraform ECR repository name |
+| `ECS_CLUSTER_NAME` | `prod-auth-service-cluster` | ECS cluster name |
+| `ECS_SERVICE_NAME` | `prod-auth-service` | ECS service name |
 | `ECS_CONTAINER_NAME` | `auth-service` | ECS task container name |
 | `ECS_CONTAINER_PORT` | `8081` | AppSpec container port |
-| `CODEDEPLOY_APPLICATION_NAME` | `prod-auth-server-codedeploy` | CodeDeploy application |
-| `CODEDEPLOY_DEPLOYMENT_GROUP_NAME` | `prod-auth-server-blue-green` | CodeDeploy deployment group |
+| `CODEDEPLOY_APPLICATION_NAME` | `prod-auth-service-codedeploy` | CodeDeploy application |
+| `CODEDEPLOY_DEPLOYMENT_GROUP_NAME` | `prod-auth-service-blue-green` | CodeDeploy deployment group |
 
-기본값은 `infra/terraform`의 기본 `environment=prod`, `service_name=auth-server`, `service_runtime_name=auth-service` 조합과 맞춥니다. Terraform 값을 바꾸면 GitHub vars도 같이 바꿉니다.
+기본값은 `infra/terraform`의 기본 `environment=prod`, `service_name=auth-service`, `service_runtime_name=auth-service` 조합과 맞춥니다. Terraform 값을 바꾸면 GitHub vars도 같이 바꿉니다.
 
 ## 로컬 검증
 

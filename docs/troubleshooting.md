@@ -93,7 +93,7 @@ id CHAR(36) NOT NULL
 
 ## AWS 배포에서 compute와 DB를 분리할지
 
-Auth-server를 AWS에 배포할 때 애플리케이션 compute와 MySQL runtime은 분리합니다. 현재 Terraform 기준은 ECS/Fargate Blue/Green과 RDS MySQL입니다.
+auth-service를 AWS에 배포할 때 애플리케이션 compute와 MySQL runtime은 분리합니다. 현재 Terraform 기준은 ECS/Fargate Blue/Green과 RDS MySQL입니다.
 
 MSA 운영 기준에서는 보통 아래 구조를 우선합니다.
 

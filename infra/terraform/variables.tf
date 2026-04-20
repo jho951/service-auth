@@ -19,7 +19,7 @@ variable "environment" {
 variable "service_name" {
   description = "Logical service name from service-contract."
   type        = string
-  default     = "auth-server"
+  default     = "auth-service"
 }
 
 variable "service_runtime_name" {

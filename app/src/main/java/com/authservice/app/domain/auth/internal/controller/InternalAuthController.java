@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,13 +28,14 @@ public class InternalAuthController {
 	private final InternalAuthAccountService internalAuthAccountService;
 
 	@PostMapping
-	public GlobalResponse<InternalAuthResponse.AccountResponse> createAccount(
+	public ResponseEntity<GlobalResponse<InternalAuthResponse.AccountResponse>> createAccount(
 		@Valid @RequestBody InternalAuthRequest.CreateAccountRequest request
 	) {
-		return GlobalResponse.ok(
-			SuccessCode.CREATE_SUCCESS,
-			internalAuthAccountService.createAccount(request)
-		);
+		return ResponseEntity.status(HttpStatus.CREATED)
+			.body(GlobalResponse.ok(
+				SuccessCode.CREATE_SUCCESS,
+				internalAuthAccountService.createAccount(request)
+			));
 	}
 
 	@DeleteMapping("/{userId}")

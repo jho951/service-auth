@@ -1,4 +1,4 @@
-# Auth-server
+# auth-service
 
 ## 기준
 

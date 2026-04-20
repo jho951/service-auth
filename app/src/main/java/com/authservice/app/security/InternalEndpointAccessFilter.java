@@ -1,5 +1,7 @@
 package com.authservice.app.security;
 
+import com.authservice.app.common.base.constant.ErrorCode;
+import com.authservice.app.common.base.dto.GlobalResponse;
 import com.authservice.app.common.base.exception.GlobalException;
 import com.authservice.app.domain.auth.userdirectory.config.InternalApiProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,7 +10,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -64,6 +65,6 @@ public class InternalEndpointAccessFilter extends OncePerRequestFilter {
 	private static void writeUnauthorized(HttpServletResponse response) throws IOException {
 		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-		OBJECT_MAPPER.writeValue(response.getOutputStream(), Map.of("error", "Unauthorized"));
+		OBJECT_MAPPER.writeValue(response.getOutputStream(), GlobalResponse.fail(ErrorCode.UNAUTHORIZED));
 	}
 }

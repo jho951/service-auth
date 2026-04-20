@@ -1,5 +1,7 @@
 package com.authservice.app.security;
 
+import com.authservice.app.common.base.constant.ErrorCode;
+import com.authservice.app.common.base.dto.GlobalResponse;
 import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import com.authservice.app.domain.auth.sso.config.SsoProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +13,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -56,7 +57,7 @@ public class CookieCsrfOriginGuardFilter extends OncePerRequestFilter {
 
 		response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-		OBJECT_MAPPER.writeValue(response.getOutputStream(), Map.of("error", "Forbidden"));
+		OBJECT_MAPPER.writeValue(response.getOutputStream(), GlobalResponse.fail(ErrorCode.FORBIDDEN));
 	}
 
 	private boolean isGuardedPath(HttpServletRequest request) {

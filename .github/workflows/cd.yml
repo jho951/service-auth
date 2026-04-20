@@ -4,215 +4,185 @@ on:
   push:
     branches:
       - main
+      - master
+      - dev
     tags:
       - "v*"
   workflow_dispatch:
     inputs:
-      image_tag:
-        description: "Optional image tag. Defaults to tag name or sha-<commit>."
-        required: false
-        type: string
-      wait_for_deployment:
-        description: "Wait for CodeDeploy deployment to finish."
-        required: false
-        type: boolean
-        default: true
+      deploy_environment:
+        description: Deployment environment.
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        default: dev
 
 permissions:
   contents: read
-  id-token: write
-  packages: read
+  packages: write
 
 concurrency:
   group: cd-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
-  ECR_REPOSITORY_NAME: ${{ vars.ECR_REPOSITORY_NAME || 'prod-auth-server' }}
-  ECS_CLUSTER_NAME: ${{ vars.ECS_CLUSTER_NAME || 'prod-auth-server-cluster' }}
-  ECS_SERVICE_NAME: ${{ vars.ECS_SERVICE_NAME || 'prod-auth-server' }}
-  ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME || 'auth-service' }}
-  ECS_CONTAINER_PORT: ${{ vars.ECS_CONTAINER_PORT || '8081' }}
-  CODEDEPLOY_APPLICATION_NAME: ${{ vars.CODEDEPLOY_APPLICATION_NAME || 'prod-auth-server-codedeploy' }}
-  CODEDEPLOY_DEPLOYMENT_GROUP_NAME: ${{ vars.CODEDEPLOY_DEPLOYMENT_GROUP_NAME || 'prod-auth-server-blue-green' }}
+  CONTRACT_REPO: https://github.com/jho951/service-contract
+  SERVICE_NAME: auth-service
+  CD_PROFILE: ec2-compose
+  IMAGE_URI: ghcr.io/${{ github.repository }}
+  IMAGE_BUILD_COMMAND: |
+    docker build \
+      -f docker/Dockerfile \
+      --build-arg GITHUB_ACTOR="${GITHUB_ACTOR}" \
+      --build-arg GH_TOKEN="${GH_TOKEN}" \
+      -t "${IMAGE_URI}:${GITHUB_SHA}" \
+      .
+    docker push "${IMAGE_URI}:${GITHUB_SHA}"
+    if [ "${GITHUB_REF_NAME}" = "main" ]; then
+      docker tag "${IMAGE_URI}:${GITHUB_SHA}" "${IMAGE_URI}:latest"
+      docker push "${IMAGE_URI}:latest"
+    fi
+  COMPOSE_CONFIG_COMMAND: |
+    touch "$RUNNER_TEMP/auth-empty.env"
+    AUTH_SERVICE_HOST_BIND=127.0.0.1 AUTH_ENV_FILE="$RUNNER_TEMP/auth-empty.env" docker compose -f docker/compose.yml -f docker/dev/compose.yml config >/tmp/auth-dev.yml
+    AUTH_SERVICE_HOST_BIND=127.0.0.1 AUTH_ENV_FILE="$RUNNER_TEMP/auth-empty.env" docker compose -f docker/compose.yml -f docker/prod/compose.yml config >/tmp/auth-prod.yml
+  HEALTH_URL: http://127.0.0.1:8081/health
+  READY_URL: http://127.0.0.1:8081/ready
   GITHUB_ACTOR: ${{ github.actor }}
-  GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+  GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GH_TOKEN || secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN || github.token }}
+  GH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GH_TOKEN || secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN || github.token }}
+  DEPLOY_COMMAND: ${{ secrets.DEPLOY_COMMAND }}
 
 jobs:
-  deploy:
+  deploy-gate:
+    name: Deploy Gate
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment: production
+    outputs:
+      deploy_environment: ${{ steps.target.outputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Validate contract lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f contract.lock.yml
+          grep -q "repo: ${CONTRACT_REPO}" contract.lock.yml
+          grep -q "name: ${SERVICE_NAME}" contract.lock.yml
+          grep -q "cd:" contract.lock.yml
+          grep -q "profile: ${CD_PROFILE}" contract.lock.yml
+
+      - name: Resolve target environment
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            target="${{ inputs.deploy_environment }}"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            target="prod"
+          else
+            target="dev"
+          fi
+          if [ "$target" = "prod" ] && [ "${{ github.ref_name }}" != "main" ] && [ "${{ github.ref_type }}" != "tag" ]; then
+            echo "Production deploy requires main branch or a tag."
+            exit 1
+          fi
+          echo "environment=$target" >> "$GITHUB_OUTPUT"
+
+  image:
+    name: Image
+    runs-on: ubuntu-latest
+    needs: deploy-gate
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: Login to GHCR
+        if: ${{ env.IMAGE_BUILD_COMMAND != 'skip' }}
+        uses: docker/login-action@v3
         with:
-          distribution: temurin
-          java-version: "17"
-          cache: gradle
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Grant execute permission for Gradle
-        run: chmod +x ./gradlew
-
-      - name: Test
-        run: ./gradlew --no-daemon clean test
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Log in to Amazon ECR
-        id: ecr-login
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Resolve image tags
-        id: image
+      - name: Build and push image
+        if: ${{ env.IMAGE_BUILD_COMMAND != 'skip' }}
         shell: bash
         run: |
           set -euo pipefail
+          ${{ env.IMAGE_BUILD_COMMAND }}
 
-          short_sha="${GITHUB_SHA::12}"
-          requested_tag="${{ github.event.inputs.image_tag || '' }}"
+      - name: Skip image publish
+        if: ${{ env.IMAGE_BUILD_COMMAND == 'skip' }}
+        run: echo "No Docker image is produced for ${{ env.SERVICE_NAME }}."
 
-          if [[ -n "$requested_tag" ]]; then
-            image_tag="$requested_tag"
-          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            image_tag="${GITHUB_REF_NAME}"
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs:
+      - deploy-gate
+      - image
+    environment: ${{ needs.deploy-gate.outputs.deploy_environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Compose config
+        shell: bash
+        run: ${{ env.COMPOSE_CONFIG_COMMAND }}
+
+      - name: Deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Service: ${SERVICE_NAME}"
+          echo "Profile: ${CD_PROFILE}"
+          echo "Environment: ${{ needs.deploy-gate.outputs.deploy_environment }}"
+          echo "Image: ${IMAGE_URI}:${{ github.sha }}"
+          if [ -n "${DEPLOY_COMMAND}" ]; then
+            eval "${DEPLOY_COMMAND}"
           else
-            image_tag="sha-${short_sha}"
+            echo "DEPLOY_COMMAND secret is not configured; image publish and compose validation completed."
           fi
 
-          image_uri="${{ steps.ecr-login.outputs.registry }}/${ECR_REPOSITORY_NAME}:${image_tag}"
-          latest_uri="${{ steps.ecr-login.outputs.registry }}/${ECR_REPOSITORY_NAME}:latest"
-
-          {
-            echo "tag=${image_tag}"
-            echo "uri=${image_uri}"
-            echo "latest_uri=${latest_uri}"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build Docker image
-        run: |
-          docker build \
-            -f docker/Dockerfile \
-            --build-arg GITHUB_ACTOR="${GITHUB_ACTOR}" \
-            --build-arg GH_TOKEN="${GH_TOKEN}" \
-            -t "${{ steps.image.outputs.uri }}" \
-            .
-
-      - name: Push Docker image
-        run: docker push "${{ steps.image.outputs.uri }}"
-
-      - name: Push latest tag for main
-        if: github.ref == 'refs/heads/main'
-        run: |
-          docker tag "${{ steps.image.outputs.uri }}" "${{ steps.image.outputs.latest_uri }}"
-          docker push "${{ steps.image.outputs.latest_uri }}"
-
-      - name: Register ECS task definition
-        id: task-def
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Health check
         shell: bash
         run: |
           set -euo pipefail
-
-          current_task_definition="$(
-            aws ecs describe-services \
-              --cluster "${ECS_CLUSTER_NAME}" \
-              --services "${ECS_SERVICE_NAME}" \
-              --query 'services[0].taskDefinition' \
-              --output text
-          )"
-
-          if [[ -z "$current_task_definition" || "$current_task_definition" == "None" ]]; then
-            echo "Unable to resolve current task definition for ${ECS_CLUSTER_NAME}/${ECS_SERVICE_NAME}" >&2
-            exit 1
+          if [ -z "${DEPLOY_COMMAND}" ]; then
+            echo "DEPLOY_COMMAND is not configured; skipping remote health check."
+            exit 0
           fi
+          case "${HEALTH_URL}" in
+            http*) curl --fail --retry 12 --retry-delay 5 "${HEALTH_URL}" ;;
+            *) echo "Runtime health command: ${HEALTH_URL}" ;;
+          esac
 
-          aws ecs describe-task-definition \
-            --task-definition "$current_task_definition" \
-            --query 'taskDefinition' \
-            > task-definition-current.json
-
-          jq \
-            --arg container "${ECS_CONTAINER_NAME}" \
-            --arg image "${{ steps.image.outputs.uri }}" \
-            '
-              .containerDefinitions |= map(
-                if .name == $container then .image = $image else . end
-              )
-              | del(
-                  .taskDefinitionArn,
-                  .revision,
-                  .status,
-                  .requiresAttributes,
-                  .compatibilities,
-                  .registeredAt,
-                  .registeredBy
-                )
-            ' \
-            task-definition-current.json \
-            > task-definition-next.json
-
-          new_task_definition="$(
-            aws ecs register-task-definition \
-              --cli-input-json file://task-definition-next.json \
-              --query 'taskDefinition.taskDefinitionArn' \
-              --output text
-          )"
-
-          echo "arn=${new_task_definition}" >> "$GITHUB_OUTPUT"
-
-      - name: Create CodeDeploy deployment
-        id: codedeploy
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: health-check
+    steps:
+      - name: Smoke test
         shell: bash
         run: |
           set -euo pipefail
-
-          cat > appspec.yml <<EOF
-          version: 0.0
-          Resources:
-            - TargetService:
-                Type: AWS::ECS::Service
-                Properties:
-                  TaskDefinition: "${{ steps.task-def.outputs.arn }}"
-                  LoadBalancerInfo:
-                    ContainerName: "${ECS_CONTAINER_NAME}"
-                    ContainerPort: ${ECS_CONTAINER_PORT}
-          EOF
-
-          jq -n \
-            --arg applicationName "${CODEDEPLOY_APPLICATION_NAME}" \
-            --arg deploymentGroupName "${CODEDEPLOY_DEPLOYMENT_GROUP_NAME}" \
-            --rawfile appspec appspec.yml \
-            '{
-              applicationName: $applicationName,
-              deploymentGroupName: $deploymentGroupName,
-              revision: {
-                revisionType: "AppSpecContent",
-                appSpecContent: {
-                  content: $appspec
-                }
-              },
-              description: "Auth-server deploy \($ENV.GITHUB_SHA)"
-            }' \
-            > create-deployment.json
-
-          deployment_id="$(
-            aws deploy create-deployment \
-              --cli-input-json file://create-deployment.json \
-              --query 'deploymentId' \
-              --output text
-          )"
-
-          echo "id=${deployment_id}" >> "$GITHUB_OUTPUT"
-
-      - name: Wait for deployment
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.wait_for_deployment }}
-        run: aws deploy wait deployment-successful --deployment-id "${{ steps.codedeploy.outputs.id }}"
+          if [ -z "${DEPLOY_COMMAND}" ]; then
+            echo "DEPLOY_COMMAND is not configured; skipping remote smoke test."
+            exit 0
+          fi
+          case "${READY_URL}" in
+            http*) curl --fail --retry 12 --retry-delay 5 "${READY_URL}" ;;
+            *) echo "Runtime smoke command: ${READY_URL}" ;;
+          esac

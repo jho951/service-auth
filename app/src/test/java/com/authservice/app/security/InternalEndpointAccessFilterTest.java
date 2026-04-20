@@ -31,7 +31,7 @@ class InternalEndpointAccessFilterTest {
 		filter.doFilter(request, response, new MockFilterChain());
 
 		assertThat(response.getStatus()).isEqualTo(401);
-		assertThat(response.getContentAsString()).contains("Unauthorized");
+		assertThat(response.getContentAsString()).contains("\"code\":9101");
 	}
 
 	@Test

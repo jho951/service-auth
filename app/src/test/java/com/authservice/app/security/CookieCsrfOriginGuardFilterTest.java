@@ -46,7 +46,7 @@ class CookieCsrfOriginGuardFilterTest {
 		filter.doFilter(request, response, new MockFilterChain());
 
 		assertThat(response.getStatus()).isEqualTo(403);
-		assertThat(response.getContentAsString()).contains("Forbidden");
+		assertThat(response.getContentAsString()).contains("\"code\":9102");
 	}
 
 	@Test
