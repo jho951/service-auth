@@ -17,7 +17,7 @@ spring:
     group:
       dev: [ "dev_auth", "dev_sso", "dev_data", "dev_db", "dev_docs", "dev_server"]
       prod: [ "prod_auth", "prod_sso", "prod_data", "prod_db", "prod_docs", "prod_server"]
-    active: ${SPRING_PROFILES_ACTIVE}
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
 internal:
   api:
