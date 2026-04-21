@@ -57,12 +57,6 @@ if [[ ! -f "$ENV_COMPOSE_FILE" ]]; then
   exit 1
 fi
 
-echo "Environment: $ENV"
-echo "Target: $TARGET"
-echo "Action: $ACTION"
-echo "Using base Docker Compose file: $BASE_COMPOSE_FILE"
-echo "Using env Docker Compose file: $ENV_COMPOSE_FILE"
-
 prepare_env_file() {
   local env="$1"
   local source_env_file="$PROJECT_ROOT/.env.$env"
@@ -75,6 +69,13 @@ prepare_env_file() {
   echo "Env file not found: $source_env_file" >&2
   echo "Create it from .env.example before running Docker." >&2
   exit 1
+}
+
+gradle_property() {
+  local key="$1"
+  local gradle_properties="${HOME}/.gradle/gradle.properties"
+  [[ -f "$gradle_properties" ]] || return 0
+  awk -F= -v key="$key" '$1 == key { print $2; exit }' "$gradle_properties"
 }
 
 ensure_network() {
@@ -90,6 +91,25 @@ ensure_network() {
 
 COMPOSE_ENV_FILE="$(prepare_env_file "$ENV")"
 echo "Using env file: $COMPOSE_ENV_FILE"
+
+if [[ -z "${GH_TOKEN:-}" ]]; then
+  GH_TOKEN="$(gradle_property githubPackagesToken)"
+  [[ -n "$GH_TOKEN" ]] || GH_TOKEN="$(gradle_property githubToken)"
+  [[ -n "$GH_TOKEN" ]] || GH_TOKEN="$(gradle_property ghToken)"
+  [[ -n "$GH_TOKEN" ]] || GH_TOKEN="$(gradle_property gh_token)"
+  export GH_TOKEN
+fi
+
+if [[ -z "${GITHUB_ACTOR:-}" ]]; then
+  GITHUB_ACTOR="$(gradle_property githubPackagesUsername)"
+  [[ -n "$GITHUB_ACTOR" ]] || GITHUB_ACTOR="$(gradle_property githubUsername)"
+  [[ -n "$GITHUB_ACTOR" ]] || GITHUB_ACTOR="jho951"
+  export GITHUB_ACTOR
+fi
+
+if [[ -z "${GITHUB_TOKEN:-}" && -n "${GH_TOKEN:-}" ]]; then
+  export GITHUB_TOKEN="$GH_TOKEN"
+fi
 
 if [[ "$ACTION" == "up" ]]; then
   SHARED_NETWORK="${SHARED_SERVICE_NETWORK:-${BACKEND_SHARED_NETWORK:-${SERVICE_SHARED_NETWORK:-service-backbone-shared}}}"

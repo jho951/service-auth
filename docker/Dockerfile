@@ -1,11 +1,8 @@
+# syntax=docker/dockerfile:1.7
+
 FROM gradle:8.5-jdk17 AS build
 
 WORKDIR /app
-
-ARG GITHUB_ACTOR
-ARG GH_TOKEN
-ENV GITHUB_ACTOR=${GITHUB_ACTOR}
-ENV GH_TOKEN=${GH_TOKEN}
 
 COPY gradle gradle
 COPY gradlew gradlew
@@ -14,11 +11,19 @@ COPY common/build.gradle common/build.gradle
 COPY app/build.gradle app/build.gradle
 
 RUN chmod +x gradlew
-RUN ./gradlew :app:dependencies :common:dependencies --no-daemon
+RUN --mount=type=secret,id=gh_token,required=false \
+    --mount=type=secret,id=github_actor,required=false \
+    if [ -f /run/secrets/gh_token ]; then export GH_TOKEN="$(cat /run/secrets/gh_token)"; fi; \
+    if [ -f /run/secrets/github_actor ]; then export GITHUB_ACTOR="$(cat /run/secrets/github_actor)"; fi; \
+    ./gradlew :app:dependencies :common:dependencies --no-daemon
 
 COPY . .
 
-RUN ./gradlew :app:build --no-daemon -x test
+RUN --mount=type=secret,id=gh_token,required=false \
+    --mount=type=secret,id=github_actor,required=false \
+    if [ -f /run/secrets/gh_token ]; then export GH_TOKEN="$(cat /run/secrets/gh_token)"; fi; \
+    if [ -f /run/secrets/github_actor ]; then export GITHUB_ACTOR="$(cat /run/secrets/github_actor)"; fi; \
+    ./gradlew :app:build --no-daemon -x test
 
 FROM amazoncorretto:17-alpine-jdk
 WORKDIR /app

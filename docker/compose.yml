@@ -5,9 +5,9 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-      args:
-        GITHUB_ACTOR: ${GITHUB_ACTOR:-}
-        GH_TOKEN: ${GH_TOKEN:-}
+      secrets:
+        - gh_token
+        - github_actor
     depends_on:
       auth-mysql:
         condition: service_healthy
@@ -35,6 +35,12 @@ services:
 
 volumes:
   auth-mysql-volume:
+
+secrets:
+  gh_token:
+    environment: GH_TOKEN
+  github_actor:
+    environment: GITHUB_ACTOR
 
 networks:
   service-shared:
