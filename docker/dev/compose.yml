@@ -4,8 +4,8 @@ services:
       - ${AUTH_ENV_FILE:-../.env.dev}
     environment:
       SERVER_PORT: ${SERVER_PORT:-8081}
-    ports:
-      - "${AUTH_SERVICE_HOST_PORT:-8082}:${SERVER_PORT:-8081}"
+    expose:
+      - "${SERVER_PORT:-8081}"
     command: ["--spring.profiles.active=dev"]
 
   auth-mysql:
