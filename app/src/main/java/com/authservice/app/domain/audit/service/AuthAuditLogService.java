@@ -1,7 +1,9 @@
 package com.authservice.app.domain.audit.service;
 
-import io.github.jho951.platform.governance.api.AuditEntry;
-import io.github.jho951.platform.governance.api.AuditLogRecorder;
+import com.auditlog.api.AuditActorType;
+import com.auditlog.api.AuditEvent;
+import com.auditlog.api.AuditEventType;
+import com.auditlog.api.AuditLogger;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -10,10 +12,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthAuditLogService {
 
-	private final AuditLogRecorder auditLogRecorder;
+	private final AuditLogger auditLogger;
 
-	public AuthAuditLogService(AuditLogRecorder auditLogRecorder) {
-		this.auditLogRecorder = auditLogRecorder;
+	public AuthAuditLogService(AuditLogger auditLogger) {
+		this.auditLogger = auditLogger;
 	}
 
 	public void logPasswordLoginSuccess(String loginId) {
@@ -92,12 +94,48 @@ public class AuthAuditLogService {
 	}
 
 	private void record(String message, Map<String, String> attributes) {
-		auditLogRecorder.record(new AuditEntry(
-			"auth",
-			message,
-			new LinkedHashMap<>(attributes),
-			Instant.now()
-		));
+		LinkedHashMap<String, Object> details = new LinkedHashMap<>(attributes);
+		auditLogger.log(
+			AuditEvent.builder(resolveEventType(attributes.get("eventType")), message)
+				.occurredAt(Instant.now())
+				.actor(
+					stringOrUnknown(attributes.get("actorId")),
+					resolveActorType(attributes.get("actorType")),
+					stringOrUnknown(attributes.get("actorId"))
+				)
+				.resource(
+					stringOrUnknown(attributes.get("resourceType")),
+					stringOrUnknown(attributes.get("resourceId"))
+				)
+				.reason(reasonOrDefault(attributes.get("reason")))
+				.details(details)
+				.result("FAILURE".equalsIgnoreCase(attributes.get("result"))
+					? com.auditlog.api.AuditResult.FAILURE
+					: com.auditlog.api.AuditResult.SUCCESS)
+				.build()
+		);
+	}
+
+	private static AuditEventType resolveEventType(String eventType) {
+		if (eventType == null || eventType.isBlank()) {
+			return AuditEventType.CUSTOM;
+		}
+		try {
+			return AuditEventType.valueOf(eventType.trim().toUpperCase());
+		} catch (IllegalArgumentException ignored) {
+			return AuditEventType.CUSTOM;
+		}
+	}
+
+	private static AuditActorType resolveActorType(String actorType) {
+		if (actorType == null || actorType.isBlank()) {
+			return AuditActorType.UNKNOWN;
+		}
+		try {
+			return AuditActorType.valueOf(actorType.trim().toUpperCase());
+		} catch (IllegalArgumentException ignored) {
+			return AuditActorType.UNKNOWN;
+		}
 	}
 
 	private static String loginIdOrUnknown(String loginId) {

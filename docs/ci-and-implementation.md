@@ -63,9 +63,9 @@ Repository는 `settings.gradle`의 `dependencyResolutionManagement`에서 중앙
 - GitHub Packages: `https://maven.pkg.github.com/jho951/platform-integrations`
 
 `platform-governance`, `platform-security`, `platform-integrations`는 private package이므로 인증값이 필요합니다.
-현재 기준 버전은 `platform-governance` `2.0.1`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
-현재 기준 버전은 `platform-security` `2.0.3`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
-현재 기준 버전은 `platform-integrations` `1.0.1`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
+현재 기준 버전은 `platform-governance` `2.0.2`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
+현재 기준 버전은 `platform-security` `2.0.5`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
+현재 기준 버전은 `platform-integrations` `1.0.3`이며, `gradle/libs.versions.toml`에서 중앙 관리합니다.
 
 로컬 shell:
 
