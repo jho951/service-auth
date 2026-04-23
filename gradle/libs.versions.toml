@@ -6,9 +6,9 @@ jakarta-persistence = "3.1.0"
 lombok = "1.18.34"
 junit-jupiter = "5.12.2"
 junit-platform = "1.12.2"
-platform-governance = "3.0.0"
-platform-security = "3.0.0"
-platform-integrations = "3.0.0"
+platform-governance = "3.0.1"
+platform-security = "3.0.1"
+platform-integrations = "3.0.1"
 
 [libraries]
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
