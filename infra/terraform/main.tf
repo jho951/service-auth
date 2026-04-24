@@ -10,6 +10,18 @@ locals {
     Role        = var.service_role
   })
 
+  vpc_id             = var.create_vpc ? aws_vpc.main[0].id : var.existing_vpc_id
+  public_subnet_ids  = var.create_vpc ? aws_subnet.public[*].id : var.existing_public_subnet_ids
+  private_subnet_ids = var.create_vpc ? aws_subnet.private[*].id : var.existing_private_subnet_ids
+  vpc_cidr           = var.create_vpc ? var.vpc_cidr : var.existing_vpc_cidr
+
+  alb_internal = var.alb_internal == null ? var.service_name != "gateway-service" : var.alb_internal
+  alb_subnet_ids = local.alb_internal ? local.private_subnet_ids : local.public_subnet_ids
+  effective_app_ingress_cidrs = length(var.app_ingress_cidrs) > 0 ? var.app_ingress_cidrs : (
+    local.alb_internal ? [local.vpc_cidr] : ["0.0.0.0/0"]
+  )
+  effective_test_listener_ingress_cidrs = length(var.test_listener_ingress_cidrs) > 0 ? var.test_listener_ingress_cidrs : local.effective_app_ingress_cidrs
+
   ecr_repository_name = var.ecr_repository_name == "" ? local.resource_prefix : var.ecr_repository_name
   app_image           = var.container_image != "" ? var.container_image : "${aws_ecr_repository.service[0].repository_url}:${var.image_tag}"
 
@@ -80,6 +92,8 @@ data "aws_availability_zones" "available" {
 }
 
 resource "aws_vpc" "main" {
+  count = var.create_vpc ? 1 : 0
+
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -90,7 +104,9 @@ resource "aws_vpc" "main" {
 }
 
 resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+  count = var.create_vpc ? 1 : 0
+
+  vpc_id = aws_vpc.main[0].id
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-igw"
@@ -98,9 +114,9 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_subnet" "public" {
-  count = length(var.public_subnet_cidrs)
+  count = var.create_vpc ? length(var.public_subnet_cidrs) : 0
 
-  vpc_id                  = aws_vpc.main.id
+  vpc_id                  = aws_vpc.main[0].id
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
@@ -112,9 +128,9 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_subnet" "private" {
-  count = length(var.private_subnet_cidrs)
+  count = var.create_vpc ? length(var.private_subnet_cidrs) : 0
 
-  vpc_id            = aws_vpc.main.id
+  vpc_id            = aws_vpc.main[0].id
   cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
@@ -125,11 +141,13 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+  count = var.create_vpc ? 1 : 0
+
+  vpc_id = aws_vpc.main[0].id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
+    gateway_id = aws_internet_gateway.main[0].id
   }
 
   tags = merge(local.common_tags, {
@@ -138,13 +156,15 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table_association" "public" {
-  count = length(aws_subnet.public)
+  count = var.create_vpc ? length(aws_subnet.public) : 0
 
   subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
+  route_table_id = aws_route_table.public[0].id
 }
 
 resource "aws_eip" "nat" {
+  count = var.create_vpc ? 1 : 0
+
   domain = "vpc"
 
   tags = merge(local.common_tags, {
@@ -153,7 +173,9 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "main" {
-  allocation_id = aws_eip.nat.id
+  count = var.create_vpc ? 1 : 0
+
+  allocation_id = aws_eip.nat[0].id
   subnet_id     = aws_subnet.public[0].id
 
   tags = merge(local.common_tags, {
@@ -164,11 +186,13 @@ resource "aws_nat_gateway" "main" {
 }
 
 resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
+  count = var.create_vpc ? 1 : 0
+
+  vpc_id = aws_vpc.main[0].id
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id
+    nat_gateway_id = aws_nat_gateway.main[0].id
   }
 
   tags = merge(local.common_tags, {
@@ -177,31 +201,59 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private" {
-  count = length(aws_subnet.private)
+  count = var.create_vpc ? length(aws_subnet.private) : 0
 
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
+  route_table_id = aws_route_table.private[0].id
 }
 
 resource "aws_security_group" "alb" {
   name        = "${local.resource_prefix}-alb-sg"
   description = "Ingress for ${var.service_name} ALB"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
-  ingress {
-    description = "Production listener"
-    from_port   = var.alb_listener_port
-    to_port     = var.alb_listener_port
-    protocol    = "tcp"
-    cidr_blocks = var.app_ingress_cidrs
+  dynamic "ingress" {
+    for_each = length(var.alb_ingress_source_security_group_ids) == 0 ? [1] : []
+    content {
+      description = "Production listener"
+      from_port   = var.alb_listener_port
+      to_port     = var.alb_listener_port
+      protocol    = "tcp"
+      cidr_blocks = local.effective_app_ingress_cidrs
+    }
   }
 
-  ingress {
-    description = "CodeDeploy test listener"
-    from_port   = var.alb_test_listener_port
-    to_port     = var.alb_test_listener_port
-    protocol    = "tcp"
-    cidr_blocks = var.test_listener_ingress_cidrs
+  dynamic "ingress" {
+    for_each = length(var.alb_ingress_source_security_group_ids) == 0 ? [1] : []
+    content {
+      description = "CodeDeploy test listener"
+      from_port   = var.alb_test_listener_port
+      to_port     = var.alb_test_listener_port
+      protocol    = "tcp"
+      cidr_blocks = local.effective_test_listener_ingress_cidrs
+    }
+  }
+
+  dynamic "ingress" {
+    for_each = var.alb_ingress_source_security_group_ids
+    content {
+      description     = "Listener access from shared caller security groups"
+      from_port       = var.alb_listener_port
+      to_port         = var.alb_listener_port
+      protocol        = "tcp"
+      security_groups = [ingress.value]
+    }
+  }
+
+  dynamic "ingress" {
+    for_each = var.alb_ingress_source_security_group_ids
+    content {
+      description     = "Test listener access from shared caller security groups"
+      from_port       = var.alb_test_listener_port
+      to_port         = var.alb_test_listener_port
+      protocol        = "tcp"
+      security_groups = [ingress.value]
+    }
   }
 
   egress {
@@ -209,7 +261,7 @@ resource "aws_security_group" "alb" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.vpc_cidr]
+    cidr_blocks = [local.vpc_cidr]
   }
 
   tags = merge(local.common_tags, {
@@ -220,7 +272,7 @@ resource "aws_security_group" "alb" {
 resource "aws_security_group" "ecs" {
   name        = "${local.resource_prefix}-ecs-sg"
   description = "Ingress from ALB to ${var.service_name} tasks"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   ingress {
     description     = "Service traffic from ALB"
@@ -248,7 +300,7 @@ resource "aws_security_group" "mysql" {
 
   name        = "${local.resource_prefix}-mysql-sg"
   description = "Allow MySQL only from ${var.service_name} ECS tasks"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   ingress {
     description     = "MySQL from ECS tasks"
@@ -267,7 +319,7 @@ resource "aws_db_subnet_group" "mysql" {
   count = var.enable_mysql ? 1 : 0
 
   name       = "${local.resource_prefix}-db-subnets"
-  subnet_ids = aws_subnet.private[*].id
+  subnet_ids = local.private_subnet_ids
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-db-subnets"
@@ -374,11 +426,25 @@ resource "aws_cloudwatch_log_group" "service" {
 resource "aws_lb" "service" {
   name               = "${local.resource_prefix}-alb"
   load_balancer_type = "application"
-  internal           = var.alb_internal
+  internal           = local.alb_internal
   security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id
+  subnets            = local.alb_subnet_ids
 
   tags = local.common_tags
+}
+
+resource "aws_route53_record" "private_service" {
+  count = var.private_dns_zone_id != "" && var.private_dns_name != "" ? 1 : 0
+
+  zone_id = var.private_dns_zone_id
+  name    = var.private_dns_name
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.service.dns_name
+    zone_id                = aws_lb.service.zone_id
+    evaluate_target_health = true
+  }
 }
 
 resource "aws_lb_target_group" "blue" {
@@ -386,7 +452,7 @@ resource "aws_lb_target_group" "blue" {
   port        = var.app_port
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   deregistration_delay = var.target_deregistration_delay
 
@@ -410,7 +476,7 @@ resource "aws_lb_target_group" "green" {
   port        = var.app_port
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   deregistration_delay = var.target_deregistration_delay
 
@@ -552,7 +618,7 @@ resource "aws_ecs_service" "service" {
   }
 
   network_configuration {
-    subnets          = aws_subnet.private[*].id
+    subnets          = local.private_subnet_ids
     security_groups  = [aws_security_group.ecs.id]
     assign_public_ip = false
   }

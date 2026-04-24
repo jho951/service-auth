@@ -13,9 +13,39 @@ output "alb_dns_name" {
   value       = aws_lb.service.dns_name
 }
 
+output "alb_zone_id" {
+  description = "ALB hosted zone ID."
+  value       = aws_lb.service.zone_id
+}
+
+output "vpc_id" {
+  description = "VPC ID used by this stack."
+  value       = local.vpc_id
+}
+
+output "public_subnet_ids" {
+  description = "Public subnet IDs associated with the stack."
+  value       = local.public_subnet_ids
+}
+
+output "private_subnet_ids" {
+  description = "Private subnet IDs associated with the stack."
+  value       = local.private_subnet_ids
+}
+
+output "alb_security_group_id" {
+  description = "ALB security group ID."
+  value       = aws_security_group.alb.id
+}
+
+output "ecs_security_group_id" {
+  description = "ECS task security group ID."
+  value       = aws_security_group.ecs.id
+}
+
 output "service_url" {
   description = "Production listener URL."
-  value       = "http://${aws_lb.service.dns_name}:${var.alb_listener_port}"
+  value       = var.private_dns_name != "" ? "http://${trimsuffix(var.private_dns_name, ".")}:${var.alb_listener_port}" : "http://${aws_lb.service.dns_name}:${var.alb_listener_port}"
 }
 
 output "test_url" {
@@ -66,4 +96,9 @@ output "mysql_endpoint" {
 output "app_secret_arn" {
   description = "Secrets Manager secret containing service secret environment variables."
   value       = aws_secretsmanager_secret.app_env.arn
+}
+
+output "private_dns_fqdn" {
+  description = "Private DNS name when Route53 private DNS alias is configured."
+  value       = var.private_dns_name != "" ? trimsuffix(var.private_dns_name, ".") : null
 }

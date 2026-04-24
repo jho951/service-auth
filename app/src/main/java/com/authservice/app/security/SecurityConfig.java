@@ -130,6 +130,7 @@ public class SecurityConfig {
 			"/auth/exchange",
 			"/oauth2/**",
 			"/login/oauth2/**",
+			"/actuator/prometheus",
 			"/actuator/health",
 			"/actuator/health/**",
 			"/favicon.ico"

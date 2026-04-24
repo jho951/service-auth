@@ -2,12 +2,7 @@ name: auth-service
 
 services:
   auth-service:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-      secrets:
-        - gh_token
-        - github_actor
+    image: ${AUTH_SERVICE_IMAGE:-auth-service:dev}
     depends_on:
       auth-mysql:
         condition: service_healthy
@@ -35,12 +30,6 @@ services:
 
 volumes:
   auth-mysql-volume:
-
-secrets:
-  gh_token:
-    environment: GH_TOKEN
-  github_actor:
-    environment: GITHUB_ACTOR
 
 networks:
   service-shared:

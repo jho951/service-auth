@@ -106,6 +106,7 @@ platform:
         - /.well-known/**
         - /error
         - /health
+        - /actuator/prometheus
         - /actuator/health
         - /actuator/health/**
         - /favicon.ico

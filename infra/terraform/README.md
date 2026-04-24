@@ -1,11 +1,11 @@
 # auth-service Terraform
 
-This stack follows the MSA Terraform contract and provisions an ECS/Fargate Blue/Green deployment baseline.
+This stack follows the MSA Terraform contract and provisions the auth-service ECS/Fargate Blue/Green baseline.
 
 It creates:
 
-- VPC with public subnets, private subnets, Internet Gateway, and NAT Gateway
-- Public ALB with production and CodeDeploy test listeners
+- Optional dedicated VPC with public/private subnets when `create_vpc = true`
+- Internal ALB with production and CodeDeploy test listeners when used in shared VPC mode
 - Blue and green ALB target groups
 - ECS cluster, task definition, and ECS service using `CODE_DEPLOY`
 - CodeDeploy ECS application and deployment group
@@ -13,6 +13,32 @@ It creates:
 - CloudWatch log group
 - Secrets Manager secret for sensitive environment variables
 - Optional private RDS MySQL when `enable_mysql = true`
+
+## Recommended Topology
+
+The platform default is a shared VPC with internal ALB plus Route53 private DNS.
+
+- Client traffic enters through the gateway public ALB only.
+- `auth-service` receives service-to-service traffic through `auth.internal.platform.local`.
+- ALB ingress should be restricted by source security groups, not internet CIDRs.
+
+Recommended variable pattern:
+
+```hcl
+create_vpc = false
+
+existing_vpc_id             = "vpc-..."
+existing_public_subnet_ids  = ["subnet-public-a", "subnet-public-c"]
+existing_private_subnet_ids = ["subnet-app-a", "subnet-app-c"]
+existing_vpc_cidr           = "10.0.0.0/16"
+
+alb_internal                          = true
+alb_ingress_source_security_group_ids = ["sg-gateway-ecs-tasks"]
+private_dns_zone_id                   = "Z123456789PRIVATE"
+private_dns_name                      = "auth.internal.platform.local"
+```
+
+Set downstream URLs such as `USER_SERVICE_BASE_URL` to private DNS endpoints, not public domains.
 
 ## Apply Infrastructure
 
@@ -97,5 +123,7 @@ The assumed role needs permission to push to the service ECR repository, describ
 ## Notes
 
 - `terraform apply` changes infrastructure. It does not replace CodeDeploy as the release mechanism.
+- Shared VPC mode uses `create_vpc = false` plus `existing_*`, `alb_internal`, and `private_dns_*`.
+- Route53 private DNS is optional in Terraform, but this service should use it in production.
 - Secrets are stored in Terraform state. Use an encrypted remote backend before production use.
 - RDS deletion protection is enabled by default for database-owning services.

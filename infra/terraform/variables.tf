@@ -40,6 +40,12 @@ variable "tags" {
   default     = {}
 }
 
+variable "create_vpc" {
+  description = "Create a dedicated VPC for this service. Set false to place the stack in a shared VPC."
+  type        = bool
+  default     = true
+}
+
 variable "vpc_cidr" {
   description = "CIDR block for the service VPC."
   type        = string
@@ -58,6 +64,45 @@ variable "private_subnet_cidrs" {
   default     = ["10.20.11.0/24", "10.20.12.0/24"]
 }
 
+variable "existing_vpc_id" {
+  description = "Existing shared VPC ID when create_vpc is false."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.create_vpc || var.existing_vpc_id != ""
+    error_message = "existing_vpc_id is required when create_vpc is false."
+  }
+}
+
+variable "existing_public_subnet_ids" {
+  description = "Existing public subnet IDs when create_vpc is false."
+  type        = list(string)
+  default     = []
+}
+
+variable "existing_private_subnet_ids" {
+  description = "Existing private subnet IDs when create_vpc is false."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = var.create_vpc || length(var.existing_private_subnet_ids) >= 2
+    error_message = "At least two private subnet IDs are required when create_vpc is false."
+  }
+}
+
+variable "existing_vpc_cidr" {
+  description = "CIDR block for the existing shared VPC when create_vpc is false."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.create_vpc || var.existing_vpc_cidr != ""
+    error_message = "existing_vpc_cidr is required when create_vpc is false."
+  }
+}
+
 variable "app_port" {
   description = "Container port."
   type        = number
@@ -65,21 +110,28 @@ variable "app_port" {
 }
 
 variable "app_ingress_cidrs" {
-  description = "CIDRs allowed to reach the ALB production listener."
+  description = "CIDRs allowed to reach the ALB production listener when SG-based source restrictions are not used."
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+  default     = []
 }
 
 variable "test_listener_ingress_cidrs" {
-  description = "CIDRs allowed to reach the CodeDeploy test listener."
+  description = "CIDRs allowed to reach the CodeDeploy test listener when SG-based source restrictions are not used."
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+  default     = []
 }
 
 variable "alb_internal" {
-  description = "Whether the ALB is internal."
+  description = "Whether the ALB is internal. Leave null to default to public for gateway-service and internal for other services."
   type        = bool
-  default     = false
+  default     = null
+  nullable    = true
+}
+
+variable "alb_ingress_source_security_group_ids" {
+  description = "Security groups allowed to reach the ALB listeners. When empty, CIDR-based ingress rules are used."
+  type        = list(string)
+  default     = []
 }
 
 variable "alb_listener_port" {
@@ -339,6 +391,26 @@ variable "mysql_apply_immediately" {
   description = "Apply RDS changes immediately instead of during the maintenance window."
   type        = bool
   default     = false
+}
+
+variable "private_dns_zone_id" {
+  description = "Optional Route53 private hosted zone ID. When set with private_dns_name, Terraform creates an alias record to the ALB."
+  type        = string
+  default     = ""
+}
+
+variable "private_dns_name" {
+  description = "Optional private DNS record name such as auth.internal.platform.local."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      (var.private_dns_name == "" && var.private_dns_zone_id == "") ||
+      (var.private_dns_name != "" && var.private_dns_zone_id != "")
+    )
+    error_message = "private_dns_name and private_dns_zone_id must either both be set or both be empty."
+  }
 }
 
 variable "app_env" {

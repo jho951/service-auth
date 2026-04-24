@@ -48,6 +48,7 @@ docker
 ```
 
 `docker/Dockerfile`과 `docker/compose.yml`은 dev/prod가 공유합니다. 환경별 Compose override와 service config는 `docker/{env}` 아래에 둡니다.
+빌드 전용 설정은 `docker/compose.build.yml`에 따로 둡니다.
 
 ## env 파일 결정
 
@@ -59,12 +60,13 @@ docker
 | `prod` | `.env.prod` |
 
 env 파일이 없으면 실행을 중단합니다. 새 환경 파일은 `.env.example`을 기준으로 만듭니다.
+dev build가 필요하면 `scripts/run.docker.sh`가 `docker/compose.build.yml`을 추가로 읽습니다.
 
 ## 서비스
 
 | 서비스            | 이미지 또는 빌드                 | 네트워크                             | 비고                       |
 |----------------|---------------------------|----------------------------------|--------------------------|
-| `auth-service` | `docker/Dockerfile` build | `service-shared`, `auth-private` | Spring Boot auth-service |
+| `auth-service` | dev=`docker/Dockerfile` build, prod=`AUTH_SERVICE_IMAGE` pull | `service-shared`, `auth-private` | Spring Boot auth-service |
 | `auth-mysql`   | `mysql:8.0`               | `auth-private`                   | auth-service 전용 MySQL    |
 
 ## 네트워크
@@ -85,6 +87,8 @@ env 파일이 없으면 실행을 중단합니다. 새 환경 파일은 `.env.ex
 - 서비스 간 HTTP 호출과 중앙 Redis 접근은 external shared network를 사용합니다.
 - auth 전용 DB 접근은 internal private network로 제한합니다.
 - 다른 서비스가 auth DB에 직접 붙지 않도록 DB는 `auth-private`에만 둡니다.
+- 여러 서비스를 같은 Docker host에 둘 때만 shared network alias 통신을 사용합니다.
+- EC2별 분산 배포에서는 `USER_SERVICE_BASE_URL`, `REDIS_HOST` 같은 외부 의존 주소를 VPC private DNS/IP 기준으로 넣습니다.
 
 ## 네트워크 이름 결정
 
@@ -116,7 +120,7 @@ networks:
 | --- | --- | --- |
 | `SERVICE_SHARED_NETWORK` | `service-backbone-shared` | external shared network 이름 |
 | `SERVER_PORT` | dev Compose 기준 `8081` | 컨테이너 내부 애플리케이션 포트 |
-| `AUTH_SERVICE_HOST_PORT` | `8082` | dev Compose에서 호스트에 노출하는 포트 |
+| `AUTH_SERVICE_HOST_PORT` | `8081` | dev Compose에서 호스트에 노출하는 포트 |
 | `MYSQL_HOST` | env 파일 값 | MySQL 호스트명. Docker에서는 보통 `auth-mysql` |
 | `MYSQL_DB` | env 파일 값 | MySQL 데이터베이스 이름 |
 | `MYSQL_USER` | env 파일 값 | MySQL 애플리케이션 사용자 |
@@ -127,14 +131,20 @@ networks:
 | `GITHUB_ACTOR` | 빈 값 | private GitHub Packages build 인증 사용자 |
 | `GH_TOKEN` | 빈 값 | private GitHub Packages build 인증 토큰 |
 
-`GITHUB_ACTOR`와 `GH_TOKEN`은 Docker build 단계에서 Gradle이 `platform-governance`, `platform-security`, `platform-integrations` private package를 받을 때 필요합니다.
+운영 배포 메모:
+
+- `.env.prod`는 single-host Compose alias가 아니라 실제 user-service private endpoint와 Redis private endpoint를 넣어야 합니다.
+- `auth-service`는 public ingress 대상이 아니므로 EC2 보안 그룹은 gateway 또는 내부 호출 CIDR만 허용하는 쪽으로 제한합니다.
+- 운영 배포용 이미지는 `AUTH_SERVICE_IMAGE=<account>.dkr.ecr.<region>.amazonaws.com/<env>-auth-service:<sha>` 형식으로 주입합니다.
+
+`GITHUB_ACTOR`와 `GH_TOKEN`은 dev Docker build 단계에서 Gradle이 `platform-governance`, `platform-security`, `platform-integrations` private package를 받을 때 필요합니다. prod runtime pull에는 필요하지 않습니다.
 
 `AUTH_ENV_FILE`은 스크립트가 Compose에 넘기는 내부 변수입니다. 직접 실행할 때만 override합니다.
 
-dev Compose는 기본적으로 `localhost:8082`를 auth-service 컨테이너의 `SERVER_PORT`에 연결합니다.
+dev Compose는 기본적으로 `localhost:8081`을 auth-service 컨테이너의 `SERVER_PORT`에 연결합니다.
 
 ```text
-http://localhost:8082/swagger-ui.html
+http://localhost:8081/swagger-ui.html
 ```
 
 ## 볼륨과 설정

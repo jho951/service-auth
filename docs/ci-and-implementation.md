@@ -101,7 +101,7 @@ env:
 | workflow | 파일 | 실행 조건 | 주요 명령 |
 | --- | --- | --- | --- |
 | CI | `.github/workflows/ci.yml` | branch push/PR | `./gradlew clean build`, Docker Compose config, Docker image build |
-| CD | `.github/workflows/cd.yml` | `main` push, `v*` tag, manual dispatch | test, ECR image push, ECS task definition registration, CodeDeploy deployment |
+| CD | `.github/workflows/cd.yml` | `main`/`master`/`dev` push, `v*` tag, manual dispatch | test, ECR image push, ECS task definition registration, CodeDeploy deployment |
 | contract-check | `.github/workflows/contract-check.yml` | PR | contract impact check |
 | CodeQL | GitHub default setup | repository security setting | CodeQL analyze |
 

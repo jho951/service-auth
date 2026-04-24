@@ -91,65 +91,48 @@ id CHAR(36) NOT NULL
 
 따라서 `BINARY(16)`에서 `CHAR(36)`으로 바꾸려 했던 이유는 성능 최적화보다 운영 가독성, 디버깅 편의성, 서비스 간 UUID 표현의 일관성을 우선했기 때문입니다.
 
-## AWS 배포에서 compute와 DB를 분리할지
+## EC2 Compose와 ECS/Fargate 중 무엇을 쓸지
 
-auth-service를 AWS에 배포할 때 애플리케이션 compute와 MySQL runtime은 분리합니다. 현재 Terraform 기준은 ECS/Fargate Blue/Green과 RDS MySQL입니다.
+이 서비스는 두 방식을 모두 검토했습니다. 구현 이력과 대표 코드 조각은 service-contract의 `shared/deployment-topologies.md`에 남깁니다.
 
-MSA 운영 기준에서는 보통 아래 구조를 우선합니다.
+`EC2 + Docker Compose`가 맞는 경우:
+
+- 한 대 또는 소수의 host에 직접 exporter, sidecar, daemon 성격 구성을 붙여야 합니다.
+- 무중단보다 단순 bootstrap과 수동 운영이 우선입니다.
+- Redis, monitoring처럼 host 단위 운영이 더 자연스러운 서비스입니다.
+
+`ECS/Fargate + CodeDeploy`가 맞는 경우:
+
+- 새 배포본을 health check로 검증한 뒤 트래픽을 옮겨야 합니다.
+- 단일 EC2 컨테이너 교체가 아니라 task set 수준의 blue/green이 필요합니다.
+- auth-service처럼 gateway 뒤의 핵심 인증 서비스를 무중단으로 교체해야 합니다.
+
+현재 운영 기본값:
 
 ```text
+현재 Free Tier
+  -> 단일 EC2 + docker compose 통합 배포
+  -> auth-service는 gateway 뒤 same-host compose network로 연결
+
+장기 권장
+  -> gateway는 ECS/Fargate + public ALB
+
 auth-service
-  -> ECS/Fargate service
-  -> ALB blue/green target group
-  -> CodeDeploy traffic shift
+  -> ECS/Fargate + CodeDeploy blue/green
 
 auth DB
-  -> RDS MySQL 또는 Aurora MySQL
+  -> RDS MySQL 또는 별도 private DB endpoint
+
+redis-service / monitoring-service
+  -> EC2 유지
 ```
 
-핵심 기준은 `auth-service`가 auth DB schema를 소유하되, DB runtime은 애플리케이션 runtime과 분리하는 것입니다.
-다른 서비스가 auth DB에 직접 접근하지 않는 원칙은 Docker MySQL 컨테이너를 쓰든 RDS를 쓰든 동일합니다.
+핵심 판단:
 
-RDS 분리를 우선하는 이유:
-
-- compute 장애가 애플리케이션과 DB를 동시에 중단시키는 위험을 줄입니다.
-- 백업, point-in-time recovery, patching, storage 증설을 AWS 관리 기능으로 처리할 수 있습니다.
-- 애플리케이션 Blue/Green 배포와 DB lifecycle을 분리할 수 있습니다.
-- Security Group으로 ECS task에서 오는 3306만 허용하기 쉽습니다.
-
-MySQL 컨테이너를 compute와 함께 두는 방식은 아래 상황에서만 검토합니다.
-
-- 개발 또는 임시 staging 환경입니다.
-- 비용 절약이 장애 대응보다 우선인 초기 MVP입니다.
-- 데이터 유실 위험, 백업, 복구, 디스크 증설을 직접 운영할 수 있습니다.
-- 단일 서버 장애 시 app과 DB가 같이 내려가는 것을 받아들일 수 있습니다.
-
-권장 배포 기준:
-
-```text
-1. ECS/Fargate + ALB + CodeDeploy Blue/Green
-2. RDS MySQL
-3. ElastiCache Redis
-4. CloudWatch Logs / metrics
-```
-
-Terraform으로 구성할 때 기본 보안 경계:
-
-```text
-ALB Security Group
-  inbound: HTTP/HTTPS 또는 제한된 client CIDR
-  outbound: ECS task port
-
-ECS Task Security Group
-  inbound: ALB Security Group에서 오는 app port
-  outbound: RDS 3306, Redis 6379, ECR, 외부 OAuth provider
-
-RDS Security Group
-  inbound: ECS Task Security Group에서 오는 3306만 허용
-  public access: false
-```
-
-따라서 운영 배포 기본값은 `auth-service는 ECS/Fargate`, `MySQL은 RDS`로 둡니다. Docker Compose의 MySQL 컨테이너 구성은 로컬, 개발, 임시 검증 용도로 취급합니다.
+- 현재 계정에서는 비용 때문에 단일 EC2 통합 배포를 먼저 사용합니다.
+- `auth-service`는 장기적으로 무중단 배포가 필요하므로 ECS/Fargate 승격 대상입니다.
+- DB는 여전히 애플리케이션 runtime과 분리합니다.
+- Docker Compose의 MySQL 컨테이너 구성은 로컬, 개발, 임시 검증 용도로만 취급합니다.
 
 ## 빠른 판단 기준
 

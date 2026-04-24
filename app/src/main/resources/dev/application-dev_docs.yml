@@ -13,6 +13,7 @@ platform:
         - /.well-known/**
         - /error
         - /health
+        - /actuator/prometheus
         - /actuator/health
         - /actuator/health/**
         - /v3/api-docs/**
