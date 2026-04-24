@@ -110,7 +110,7 @@ id CHAR(36) NOT NULL
 현재 운영 기본값:
 
 ```text
-현재 Free Tier
+현재 단일 EC2 `m7i-flex.large`
   -> 단일 EC2 + docker compose 통합 배포
   -> auth-service는 gateway 뒤 same-host compose network로 연결
 
@@ -129,7 +129,7 @@ redis-service / monitoring-service
 
 핵심 판단:
 
-- 현재 계정에서는 비용 때문에 단일 EC2 통합 배포를 먼저 사용합니다.
+- 현재는 `m7i-flex.large` 단일 EC2 통합 배포를 먼저 사용합니다.
 - `auth-service`는 장기적으로 무중단 배포가 필요하므로 ECS/Fargate 승격 대상입니다.
 - DB는 여전히 애플리케이션 runtime과 분리합니다.
 - Docker Compose의 MySQL 컨테이너 구성은 로컬, 개발, 임시 검증 용도로만 취급합니다.
