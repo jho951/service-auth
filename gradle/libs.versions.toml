@@ -23,8 +23,11 @@ springdoc-openapi = { module = "org.springdoc:springdoc-openapi-starter-webmvc-u
 platform-runtime-bom = { module = "io.github.jho951.platform:platform-runtime-bom", version.ref = "platform-integrations" }
 platform-governance-bom = { module = "io.github.jho951.platform:platform-governance-bom", version.ref = "platform-governance" }
 platform-governance-starter = { module = "io.github.jho951.platform:platform-governance-starter" }
+platform-governance-adapter-auditlog = { module = "io.github.jho951.platform:platform-governance-adapter-auditlog", version.ref = "platform-governance" }
+platform-governance-adapter-policyconfig = { module = "io.github.jho951.platform:platform-governance-adapter-policyconfig", version.ref = "platform-governance" }
 platform-security-bom = { module = "io.github.jho951.platform:platform-security-bom", version.ref = "platform-security" }
 platform-security-starter = { module = "io.github.jho951.platform:platform-security-starter", version.ref = "platform-security" }
+platform-security-adapter-auth = { module = "io.github.jho951.platform:platform-security-adapter-auth", version.ref = "platform-security" }
 platform-security-governance-bridge = { module = "io.github.jho951.platform:platform-security-governance-bridge", version.ref = "platform-integrations" }
 
 [plugins]

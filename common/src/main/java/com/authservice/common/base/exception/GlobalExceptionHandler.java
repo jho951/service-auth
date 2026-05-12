@@ -1,19 +1,18 @@
 package com.authservice.common.base.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.authservice.common.base.constant.ErrorCode;
 import com.authservice.common.base.dto.GlobalResponse;
+import com.authservice.common.web.ClientIpResolver;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
-
-	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
 	@ExceptionHandler(GlobalException.class)
 	public ResponseEntity<GlobalResponse<Void>> handleGlobalException(GlobalException ex, HttpServletRequest request) {
@@ -45,18 +44,8 @@ public class GlobalExceptionHandler {
 			errorCode.getCode(),
 			request.getMethod(),
 			request.getRequestURI(),
-			resolveClientIp(request),
+			ClientIpResolver.resolve(request),
 			exceptionType,
 			exceptionMessage);
-	}
-
-	private String resolveClientIp(HttpServletRequest request) {
-		String xff = request.getHeader("X-Forwarded-For");
-		if (xff != null && !xff.isBlank()) {
-			int comma = xff.indexOf(',');
-			return comma > -1 ? xff.substring(0, comma).trim() : xff.trim();
-		}
-		String remoteAddr = request.getRemoteAddr();
-		return remoteAddr == null ? "unknown" : remoteAddr;
 	}
 }

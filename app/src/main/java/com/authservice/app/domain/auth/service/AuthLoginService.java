@@ -6,7 +6,8 @@ import com.authservice.common.logging.SensitiveDataMasker;
 import com.authservice.app.domain.auth.config.AuthHttpProperties;
 import com.authservice.app.domain.auth.model.AuthPrincipal;
 import com.authservice.app.domain.auth.model.AuthTokens;
-import com.authservice.app.security.AuthJwtTokenService;
+import com.authservice.app.security.platform.issuer.PlatformAuthTokenIssuer;
+import com.authservice.app.security.jwt.AuthJwtTokenService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -21,6 +22,7 @@ public class AuthLoginService {
 
 	private final AuthUserFinder userFinder;
 	private final AuthPasswordVerifier passwordVerifier;
+	private final PlatformAuthTokenIssuer platformAuthTokenIssuer;
 	private final AuthJwtTokenService tokenService;
 	private final AuthRedisRefreshTokenStore refreshTokenStore;
 	private final Duration refreshTtl;
@@ -28,12 +30,14 @@ public class AuthLoginService {
 	public AuthLoginService(
 		AuthUserFinder userFinder,
 		AuthPasswordVerifier passwordVerifier,
+		PlatformAuthTokenIssuer platformAuthTokenIssuer,
 		AuthJwtTokenService tokenService,
 		AuthRedisRefreshTokenStore refreshTokenStore,
 		AuthHttpProperties properties
 	) {
 		this.userFinder = userFinder;
 		this.passwordVerifier = passwordVerifier;
+		this.platformAuthTokenIssuer = platformAuthTokenIssuer;
 		this.tokenService = tokenService;
 		this.refreshTokenStore = refreshTokenStore;
 		this.refreshTtl = Duration.ofSeconds(properties.getJwt().getRefreshSeconds());
@@ -82,9 +86,6 @@ public class AuthLoginService {
 	}
 
 	private AuthTokens issue(AuthPrincipal principal) {
-		return new AuthTokens(
-			tokenService.issueAccessToken(principal),
-			tokenService.issueRefreshToken(principal)
-		);
+		return platformAuthTokenIssuer.issue(principal);
 	}
 }

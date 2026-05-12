@@ -1,20 +1,15 @@
-def githubPackagesUsername = providers.gradleProperty('githubPackagesUsername')
-    .orElse(providers.gradleProperty('githubUsername'))
-    .orElse(providers.environmentVariable('GITHUB_ACTOR'))
-    .orElse('jho951')
-def githubPackagesToken = providers.gradleProperty('githubPackagesToken')
-    .orElse(providers.gradleProperty('githubToken'))
-    .orElse(providers.gradleProperty('ghToken'))
-    .orElse(providers.gradleProperty('gh_token'))
-    .orElse(providers.environmentVariable('GH_PACKAGES_TOKEN'))
-    .orElse(providers.environmentVariable('GH_TOKEN'))
-    .orElse(providers.environmentVariable('GITHUB_TOKEN'))
-
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenLocal()
         mavenCentral()
+
+        def githubPackagesUsername = providers.gradleProperty('githubPackagesUsername')
+                .orElse(providers.gradleProperty('githubUsername'))
+                .orElse(providers.environmentVariable('GITHUB_ACTOR'))
+                .orElse('jho951')
+        def githubPackagesToken = providers.gradleProperty('gh_token')
+                .orElse(providers.environmentVariable('GH_TOKEN'))
+
         ['platform-governance', 'platform-security', 'platform-integrations'].each { repoName ->
             maven {
                 url = uri("https://maven.pkg.github.com/jho951/${repoName}")

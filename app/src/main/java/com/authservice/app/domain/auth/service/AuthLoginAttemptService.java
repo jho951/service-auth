@@ -1,6 +1,7 @@
 package com.authservice.app.domain.auth.service;
 
 import com.authservice.app.domain.auth.entity.AuthLoginAttempt;
+import com.authservice.app.domain.auth.model.AuthLoginResult;
 import com.authservice.app.domain.auth.repository.AuthLoginAttemptRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,11 +16,11 @@ public class AuthLoginAttemptService {
 	}
 
 	@Transactional
-	public void record(String loginId, AuthRequestContext context, String result) {
+	public void record(String loginId, AuthRequestContext context, AuthLoginResult result) {
 		authLoginAttemptRepository.save(new AuthLoginAttempt(
 			loginId == null ? "" : loginId,
 			context == null ? "" : context.ip(),
-			result
+			result == null ? "" : result.value()
 		));
 	}
 }

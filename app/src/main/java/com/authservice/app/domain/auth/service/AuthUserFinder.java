@@ -1,5 +1,6 @@
 package com.authservice.app.domain.auth.service;
 
+import com.authservice.app.domain.auth.model.AuthAccountStatus;
 import com.authservice.app.domain.auth.model.AuthUser;
 import com.authservice.app.domain.auth.userdirectory.service.UserDirectory;
 import java.util.List;
@@ -28,7 +29,7 @@ public class AuthUserFinder {
 		return authRepository.findByLoginId(username)
 			.filter(auth -> !auth.isAccountLocked())
 			.flatMap(auth -> userDirectory.findByUserId(auth.getUserId())
-				.filter(user -> "A".equalsIgnoreCase(user.status()))
+				.filter(user -> AuthAccountStatus.isActive(user.status()))
 				.map(user -> {
 					AuthUser found = new AuthUser(
 						String.valueOf(user.userId()),

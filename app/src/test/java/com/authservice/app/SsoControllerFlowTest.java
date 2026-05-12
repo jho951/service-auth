@@ -5,9 +5,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.authservice.app.domain.auth.sso.controller.SsoController;
+import com.authservice.app.domain.auth.sso.dto.SsoRequest;
 import com.authservice.app.domain.auth.sso.dto.SsoResponse;
 import com.authservice.app.domain.auth.sso.model.SsoPrincipal;
-import com.authservice.app.domain.auth.sso.service.SsoAuthService;
+import com.authservice.app.domain.auth.sso.service.SsoCurrentUserQueryService;
+import com.authservice.app.domain.auth.sso.service.SsoInternalSessionValidationService;
+import com.authservice.app.domain.auth.sso.service.SsoLogoutService;
+import com.authservice.app.domain.auth.sso.service.SsoOAuthFlowService;
+import com.authservice.app.domain.auth.sso.service.SsoTicketExchangeService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,51 +26,80 @@ import org.springframework.mock.web.MockHttpServletRequest;
 class SsoControllerFlowTest {
 
 	@Mock
-	private SsoAuthService ssoAuthService;
+	private SsoOAuthFlowService ssoOAuthFlowService;
+
+	@Mock
+	private SsoTicketExchangeService ssoTicketExchangeService;
+
+	@Mock
+	private SsoInternalSessionValidationService ssoInternalSessionValidationService;
+
+	@Mock
+	private SsoCurrentUserQueryService ssoCurrentUserQueryService;
+
+	@Mock
+	private SsoLogoutService ssoLogoutService;
 
 	private SsoController ssoController;
 
 	@BeforeEach
 	void setUp() {
-		ssoController = new SsoController(ssoAuthService);
+		ssoController = new SsoController(
+			ssoOAuthFlowService,
+			ssoTicketExchangeService,
+			ssoInternalSessionValidationService,
+			ssoCurrentUserQueryService,
+			ssoLogoutService
+		);
 	}
 
 	@Test
-	void logoutDelegatesToSsoAuthService() {
+	void startGithubLoginDelegatesToOAuthFlowService() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
-		when(ssoAuthService.logout(request)).thenReturn(ResponseEntity.noContent().build());
+		when(ssoOAuthFlowService.startGithubLogin("editor", "http://localhost/auth/callback", request))
+			.thenReturn(ResponseEntity.status(302).build());
+
+		ResponseEntity<Void> response = ssoController.startGithubLogin("editor", "http://localhost/auth/callback", request);
+
+		assertThat(response.getStatusCode().value()).isEqualTo(302);
+		verify(ssoOAuthFlowService).startGithubLogin("editor", "http://localhost/auth/callback", request);
+	}
+
+	@Test
+	void exchangeDelegatesToTicketExchangeService() {
+		SsoRequest.ExchangeRequest request = new SsoRequest.ExchangeRequest();
+		request.setTicket("ticket-1");
+		MockHttpServletRequest servletRequest = new MockHttpServletRequest();
+		when(ssoTicketExchangeService.exchangeTicket("ticket-1", servletRequest)).thenReturn(ResponseEntity.noContent().build());
+
+		ResponseEntity<Void> response = ssoController.exchange(request, servletRequest);
+
+		assertThat(response.getStatusCode().value()).isEqualTo(204);
+		verify(ssoTicketExchangeService).exchangeTicket("ticket-1", servletRequest);
+	}
+
+	@Test
+	void logoutDelegatesToSsoLogoutService() {
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		when(ssoLogoutService.logout(request)).thenReturn(ResponseEntity.noContent().build());
 
 		ResponseEntity<Void> response = ssoController.logout(request);
 
 		assertThat(response.getStatusCode().value()).isEqualTo(204);
-		verify(ssoAuthService).logout(request);
+		verify(ssoLogoutService).logout(request);
 	}
 
 	@Test
-	void sessionDelegatesToSsoAuthService() {
+	void sessionDelegatesToInternalSessionValidationService() {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		SsoResponse.InternalSessionValidationResponse validation =
 			new SsoResponse.InternalSessionValidationResponse(true, "user-1", "USER", "ACTIVE", "session-1");
-		when(ssoAuthService.validateInternalSession(request)).thenReturn(ResponseEntity.ok(validation));
+		when(ssoInternalSessionValidationService.validate(request)).thenReturn(ResponseEntity.ok(validation));
 
 		ResponseEntity<SsoResponse.InternalSessionValidationResponse> response = ssoController.session(request);
 
 		assertThat(response.getBody()).isSameAs(validation);
-		verify(ssoAuthService).validateInternalSession(request);
-	}
-
-	@Test
-	void internalSessionValidateDelegatesToSsoAuthService() {
-		MockHttpServletRequest request = new MockHttpServletRequest();
-		SsoResponse.InternalSessionValidationResponse validation =
-			new SsoResponse.InternalSessionValidationResponse(false, "", "", "", "");
-		when(ssoAuthService.validateInternalSession(request)).thenReturn(ResponseEntity.status(401).body(validation));
-
-		ResponseEntity<SsoResponse.InternalSessionValidationResponse> response = ssoController.validateSession(request);
-
-		assertThat(response.getStatusCode().value()).isEqualTo(401);
-		assertThat(response.getBody()).isSameAs(validation);
-		verify(ssoAuthService).validateInternalSession(request);
+		verify(ssoInternalSessionValidationService).validate(request);
 	}
 
 	@Test
@@ -79,13 +113,13 @@ class SsoControllerFlowTest {
 			List.of("USER"),
 			"ACTIVE"
 		);
-		when(ssoAuthService.getCurrentUser(request, "editor")).thenReturn(principal);
+		when(ssoCurrentUserQueryService.getCurrentUser(request, "editor")).thenReturn(principal);
 
 		SsoResponse.MeResponse response = ssoController.me(request, "editor");
 
 		assertThat(response.getId()).isEqualTo("user-1");
 		assertThat(response.getEmail()).isEqualTo("user@example.com");
 		assertThat(response.getRoles()).containsExactly("USER");
-		verify(ssoAuthService).getCurrentUser(request, "editor");
+		verify(ssoCurrentUserQueryService).getCurrentUser(request, "editor");
 	}
 }

@@ -1,6 +1,5 @@
 package com.authservice.app.domain.auth.config;
 
-import com.authservice.app.domain.auth.support.RefreshCookieWriter;
 import com.authservice.app.domain.auth.support.RefreshTokenExtractor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -11,13 +10,7 @@ import org.springframework.context.annotation.Configuration;
 public class AuthHttpSupportConfig {
 
 	@Bean
-	public RefreshCookieWriter refreshCookieWriter(AuthHttpProperties properties) {
-		return new RefreshCookieWriter(properties);
-	}
-
-	@Bean
-	public RefreshTokenExtractor refreshTokenExtractor(AuthHttpProperties properties) {
+	public RefreshTokenExtractor refreshTokenExtractor(AuthCookieProperties properties) {
 		return new RefreshTokenExtractor(properties);
 	}
-
 }

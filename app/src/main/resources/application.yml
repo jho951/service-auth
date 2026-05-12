@@ -64,6 +64,9 @@ management:
 platform:
   governance:
     enabled: ${PLATFORM_GOVERNANCE_ENABLED:true}
+    service-role-preset: ${PLATFORM_GOVERNANCE_SERVICE_ROLE_PRESET:IDENTITY_SERVICE}
+    policy-config:
+      values: {}
     audit:
       enabled: ${PLATFORM_GOVERNANCE_AUDIT_ENABLED:true}
       service-name: ${PLATFORM_GOVERNANCE_AUDIT_SERVICE_NAME:${spring.application.name}}
@@ -73,26 +76,19 @@ platform:
         enabled: ${PLATFORM_GOVERNANCE_AUDIT_IDENTITY_ENABLED:true}
         validation-enabled: ${PLATFORM_GOVERNANCE_AUDIT_IDENTITY_VALIDATION_ENABLED:true}
         fail-on-validation-error: ${PLATFORM_GOVERNANCE_AUDIT_IDENTITY_FAIL_ON_VALIDATION_ERROR:true}
-    policy-config:
-      store: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_STORE:MEMORY}
-      file-path: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_FILE_PATH:}
-      cache-ttl-millis: ${PLATFORM_GOVERNANCE_POLICY_ENGINE_CACHE_TTL_MILLIS:3000}
     engine:
       strict: ${PLATFORM_GOVERNANCE_ENGINE_STRICT:false}
     violation:
       action: ${PLATFORM_GOVERNANCE_VIOLATION_ACTION:DENY}
-      handler-failure-fatal: ${PLATFORM_GOVERNANCE_VIOLATION_HANDLER_FAILURE_FATAL:false}
     operational:
       fail-fast-enabled: ${PLATFORM_GOVERNANCE_OPERATIONAL_FAIL_FAST_ENABLED:true}
       production-profiles: ${PLATFORM_GOVERNANCE_OPERATIONAL_PRODUCTION_PROFILES:prod}
       allow-audit-disabled-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_AUDIT_DISABLED_IN_PRODUCTION:false}
-      allow-non-strict-engine-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_NON_STRICT_ENGINE_IN_PRODUCTION:false}
       allow-permissive-violation-action-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_PERMISSIVE_VIOLATION_ACTION_IN_PRODUCTION:false}
       require-audit-sink-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_AUDIT_SINK_IN_PRODUCTION:true}
       require-audit-context-resolver-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_AUDIT_CONTEXT_RESOLVER_IN_PRODUCTION:true}
       require-audit-service-identity-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_AUDIT_SERVICE_IDENTITY_IN_PRODUCTION:true}
       require-identity-audit-validation-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_IDENTITY_AUDIT_VALIDATION_IN_PRODUCTION:true}
-      require-policy-config-in-enforcing-mode: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_POLICY_CONFIG_IN_ENFORCING_MODE:true}
       require-fatal-handler-failures-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_REQUIRE_FATAL_HANDLER_FAILURES_IN_PRODUCTION:true}
       allow-ignore-audit-failure-policy-in-production: ${PLATFORM_GOVERNANCE_OPERATIONAL_ALLOW_IGNORE_AUDIT_FAILURE_POLICY_IN_PRODUCTION:false}
   security:
@@ -116,7 +112,6 @@ platform:
         - /auth/sso/start
         - /auth/session
         - /auth/me
-        - /auth/internal/session/validate
         - /auth/oauth/github/callback
         - /auth/login/github
         - /auth/oauth2/authorize/github
@@ -134,7 +129,7 @@ platform:
       default-mode: HYBRID
       allow-session-for-browser: true
       allow-bearer-for-api: true
-      internal-token-enabled: ${PLATFORM_SECURITY_INTERNAL_TOKEN_ENABLED:false}
+      internal-token-enabled: ${PLATFORM_SECURITY_INTERNAL_TOKEN_ENABLED:true}
       jwt-secret: ${AUTH_JWT_SECRET}
       access-token-ttl: PT20M
       refresh-token-ttl: PT30000S

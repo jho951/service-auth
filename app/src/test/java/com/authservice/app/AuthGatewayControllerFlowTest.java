@@ -8,15 +8,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.authservice.app.domain.audit.service.AuthAuditLogService;
+import com.authservice.app.domain.auth.model.AuthFailureReason;
 import com.authservice.app.domain.auth.controller.AuthGatewayController;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
+import com.authservice.app.domain.auth.model.AuthLoginResult;
 import com.authservice.app.domain.auth.model.AuthTokens;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
 import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
 import com.authservice.app.domain.auth.service.AuthLoginService;
-import com.authservice.app.domain.auth.sso.service.SsoCookieService;
-import com.authservice.app.domain.auth.support.RefreshCookieWriter;
+import com.authservice.app.domain.auth.support.AuthCookieResponseWriter;
 import com.authservice.app.domain.auth.support.RefreshTokenExtractor;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,16 +38,13 @@ class AuthGatewayControllerFlowTest {
 	private RefreshTokenExtractor refreshTokenExtractor;
 
 	@Mock
-	private RefreshCookieWriter refreshCookieWriter;
+	private AuthCookieResponseWriter authCookieResponseWriter;
 
 	@Mock
 	private AuthAccountPolicyService authAccountPolicyService;
 
 	@Mock
 	private AuthLoginAttemptService authLoginAttemptService;
-
-	@Mock
-	private SsoCookieService ssoCookieService;
 
 	@Mock
 	private AuthAuditLogService authAuditLogService;
@@ -58,10 +56,9 @@ class AuthGatewayControllerFlowTest {
 		authGatewayController = new AuthGatewayController(
 			authService,
 			refreshTokenExtractor,
-			refreshCookieWriter,
+			authCookieResponseWriter,
 			authAccountPolicyService,
 			authLoginAttemptService,
-			ssoCookieService,
 			authAuditLogService
 		);
 	}
@@ -71,10 +68,9 @@ class AuthGatewayControllerFlowTest {
 		AuthRequest.LoginRequest request = new AuthRequest.LoginRequest("user@example.com", "Password12!");
 		MockHttpServletRequest servletRequest = new MockHttpServletRequest();
 		AuthTokens tokens = new AuthTokens("access-token", "refresh-token");
-		when(ssoCookieService.buildAccessTokenCookie("access-token")).thenReturn("access=access-token");
 		when(authService.login(request.getUsername(), request.getPassword())).thenReturn(tokens);
-		when(refreshCookieWriter.write(any(AuthTokens.class), anyTokenResponseEntity()))
-			.thenReturn(ResponseEntity.ok().build());
+		ResponseEntity<AuthResponse.TokenResponse> expected = ResponseEntity.ok(new AuthResponse.TokenResponse("access-token", "refresh-token"));
+		when(authCookieResponseWriter.writeTokenCookies(any(AuthTokens.class), anyTokenResponseEntity())).thenReturn(expected);
 
 		ResponseEntity<AuthResponse.TokenResponse> response = authGatewayController.login(request, servletRequest);
 
@@ -83,7 +79,7 @@ class AuthGatewayControllerFlowTest {
 		assertThat(response.getBody().getAccessToken()).isEqualTo("access-token");
 		assertThat(response.getBody().getRefreshToken()).isEqualTo("refresh-token");
 		verify(authAccountPolicyService).markLoginSuccess(request.getUsername());
-		verify(authLoginAttemptService).record(eq(request.getUsername()), any(), eq("SUCCESS"));
+		verify(authLoginAttemptService).record(eq(request.getUsername()), any(), eq(AuthLoginResult.SUCCESS));
 		verify(authAuditLogService).logPasswordLoginSuccess(request.getUsername());
 	}
 
@@ -98,19 +94,20 @@ class AuthGatewayControllerFlowTest {
 			.isSameAs(loginException);
 
 		verify(authAccountPolicyService).markLoginFailure(request.getUsername());
-		verify(authLoginAttemptService).record(eq(request.getUsername()), any(), eq("FAILURE"));
-		verify(authAuditLogService).logPasswordLoginFailure(request.getUsername(), "INVALID_CREDENTIALS_OR_POLICY");
+		verify(authLoginAttemptService).record(eq(request.getUsername()), any(), eq(AuthLoginResult.FAILURE));
+		verify(authAuditLogService).logPasswordLoginFailure(request.getUsername(), AuthFailureReason.INVALID_CREDENTIALS_OR_POLICY);
 	}
 
 	@Test
 	void refreshReturnsRotatedTokenPair() {
 		HttpServletRequest servletRequest = new MockHttpServletRequest();
 		AuthTokens refreshed = new AuthTokens("new-access-token", "new-refresh-token");
-		when(ssoCookieService.buildAccessTokenCookie("new-access-token")).thenReturn("access=new-access-token");
 		when(refreshTokenExtractor.extract(servletRequest)).thenReturn("old-refresh-token");
 		when(authService.refresh("old-refresh-token")).thenReturn(refreshed);
-		when(refreshCookieWriter.write(any(AuthTokens.class), anyTokenResponseEntity()))
-			.thenReturn(ResponseEntity.ok().build());
+		ResponseEntity<AuthResponse.TokenResponse> expected = ResponseEntity.ok(
+			new AuthResponse.TokenResponse("new-access-token", "new-refresh-token")
+		);
+		when(authCookieResponseWriter.writeTokenCookies(any(AuthTokens.class), anyTokenResponseEntity())).thenReturn(expected);
 
 		ResponseEntity<AuthResponse.TokenResponse> response = authGatewayController.refresh(servletRequest);
 
@@ -121,7 +118,8 @@ class AuthGatewayControllerFlowTest {
 		verify(authService).refresh("old-refresh-token");
 	}
 
+	@SuppressWarnings("unchecked")
 	private ResponseEntity<AuthResponse.TokenResponse> anyTokenResponseEntity() {
-		return any();
+		return (ResponseEntity<AuthResponse.TokenResponse>) any(ResponseEntity.class);
 	}
 }

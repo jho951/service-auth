@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -21,16 +22,16 @@ public class GithubOAuthClient {
 	private final RestClient restClient;
 	private final SsoProperties properties;
 
-	public GithubOAuthClient(SsoProperties properties) {
-		this.restClient = RestClient.builder().build();
+	public GithubOAuthClient(RestClient.Builder restClientBuilder, SsoProperties properties) {
+		this.restClient = restClientBuilder.build();
 		this.properties = properties;
 	}
 
 	public GithubUserProfile fetchUserProfileByAccessToken(String accessToken) {
 		GithubUserResponse user = restClient.get()
 			.uri(properties.getGithub().getUserUri())
-			.header("Accept", MediaType.APPLICATION_JSON_VALUE)
-			.header("Authorization", "Bearer " + accessToken)
+			.header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+			.header(HttpHeaders.AUTHORIZATION, bearerToken(accessToken))
 			.retrieve()
 			.body(GithubUserResponse.class);
 
@@ -64,8 +65,8 @@ public class GithubOAuthClient {
 	private String resolvePrimaryEmail(String accessToken) {
 		GithubEmailResponse[] emails = restClient.get()
 			.uri(properties.getGithub().getEmailsUri())
-			.header("Accept", MediaType.APPLICATION_JSON_VALUE)
-			.header("Authorization", "Bearer " + accessToken)
+			.header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+			.header(HttpHeaders.AUTHORIZATION, bearerToken(accessToken))
 			.retrieve()
 			.body(GithubEmailResponse[].class);
 
@@ -79,6 +80,10 @@ public class GithubOAuthClient {
 			.map(GithubEmailResponse::email)
 			.findFirst()
 			.orElse(emails[0].email());
+	}
+
+	private String bearerToken(String accessToken) {
+		return "Bearer " + accessToken;
 	}
 
 	private record GithubUserResponse(Long id, String login, String name, String email,

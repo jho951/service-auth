@@ -1,5 +1,10 @@
 package com.authservice.common.base.constant;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
 public enum ErrorCode {
 	INVALID_REQUEST(400,  9015, "잘못된 요청입니다."),
 	VALIDATION_ERROR(400, 9016, "요청 필드 유효성 검사에 실패했습니다."),
@@ -21,29 +26,10 @@ public enum ErrorCode {
 	USER_SERVICE_UNAVAILABLE(502,  9007, "user-service 연동에 실패했습니다."),
 	FAIL(400,9999, "요청 응답 실패, 관리자에게 문의해주세요.");
 
+	/** http 상태 */
 	private final int httpStatus;
+	/** 유지보수를 위한 상태 코드 */
 	private final int code;
+	/** 추가 메시지 */
 	private final String message;
-
-	/**
-	 * 생성자
-	 * @param httpStatus 상태
-	 * @param code 상태 코드
-	 * @param message 추가 메시지
-	 */
-	ErrorCode(int httpStatus, int code, String message) {
-		this.httpStatus = httpStatus;
-		this.code = code;
-		this.message = message;
-	}
-
-	public int getHttpStatus() {
-		return httpStatus;
-	}
-	public int getCode() {
-		return code;
-	}
-	public String getMessage() {
-		return message;
-	}
 }

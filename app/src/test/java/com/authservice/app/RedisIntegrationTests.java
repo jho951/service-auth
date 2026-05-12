@@ -2,6 +2,7 @@ package com.authservice.app;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.authservice.app.domain.auth.model.AuthAccountStatus;
 import com.authservice.app.domain.auth.service.AuthRedisRefreshTokenStore;
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoSessionPayload;
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoStatePayload;
@@ -42,7 +43,7 @@ class RedisIntegrationTests {
 		ssoSessionStore.saveState(state, new SsoStatePayload("http://localhost/callback", "EDITOR", expiresAt), expiresAt);
 		ssoSessionStore.saveSession(
 			sessionId,
-			new SsoSessionPayload("user-1", "user@example.com", "User", null, List.of("USER"), "A", expiresAt),
+			new SsoSessionPayload("user-1", "user@example.com", "User", null, List.of("USER"), AuthAccountStatus.ACTIVE.code(), expiresAt),
 			expiresAt
 		);
 

@@ -12,6 +12,9 @@ import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Version;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -19,6 +22,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public abstract class BaseEntity {
 
 	@Id
@@ -38,23 +43,4 @@ public abstract class BaseEntity {
 	@LastModifiedDate
 	@Column(name = "modified_at", nullable = false)
 	private LocalDateTime modifiedAt;
-
-	protected BaseEntity() {
-	}
-
-	public UUID getId() {
-		return id;
-	}
-
-	public Long getVersion() {
-		return version;
-	}
-
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
-
-	public LocalDateTime getModifiedAt() {
-		return modifiedAt;
-	}
 }

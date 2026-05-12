@@ -21,20 +21,20 @@ public class SsoOAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
 	private static final Logger log = LoggerFactory.getLogger(SsoOAuth2SuccessHandler.class);
 
-	private final SsoAuthService ssoAuthService;
+	private final SsoOAuthFlowService ssoOAuthFlowService;
 	private final SsoUserService ssoUserService;
 	private final SsoCookieService ssoCookieService;
 	private final GithubOAuthClient githubOAuthClient;
 	private final OAuth2AuthorizedClientService authorizedClientService;
 
 	public SsoOAuth2SuccessHandler(
-		SsoAuthService ssoAuthService,
+		SsoOAuthFlowService ssoOAuthFlowService,
 		SsoUserService ssoUserService,
 		SsoCookieService ssoCookieService,
 		GithubOAuthClient githubOAuthClient,
 		OAuth2AuthorizedClientService authorizedClientService
 	) {
-		this.ssoAuthService = ssoAuthService;
+		this.ssoOAuthFlowService = ssoOAuthFlowService;
 		this.ssoUserService = ssoUserService;
 		this.ssoCookieService = ssoCookieService;
 		this.githubOAuthClient = githubOAuthClient;
@@ -64,14 +64,14 @@ public class SsoOAuth2SuccessHandler implements AuthenticationSuccessHandler {
 				authorizedClient.getAccessToken().getTokenValue()
 			);
 			SsoPrincipal principal = ssoUserService.verifyGithubUser(profile);
-			URI redirectUri = ssoAuthService.completeOAuthLogin(principal, request);
+			URI redirectUri = ssoOAuthFlowService.completeOAuthLogin(principal, request);
 
 			response.setStatus(HttpServletResponse.SC_FOUND);
 			response.setHeader("Location", redirectUri.toString());
 			response.addHeader("Set-Cookie", ssoCookieService.clearOAuthStateCookie());
 		} catch (RuntimeException ex) {
 			log.warn("OAuth2 login success handler failed", ex);
-			URI redirectUri = ssoAuthService.resolveOAuthFailureRedirect(request);
+			URI redirectUri = ssoOAuthFlowService.resolveOAuthFailureRedirect(request);
 			response.addHeader("Set-Cookie", ssoCookieService.clearOAuthStateCookie());
 			if (redirectUri == null) {
 				response.setStatus(HttpServletResponse.SC_BAD_GATEWAY);

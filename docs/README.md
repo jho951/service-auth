@@ -1,21 +1,16 @@
-# auth-service 문서
+# auth-service Docs
 
-auth-service의 구현, 운영, 문제 해결 문서는 이 디렉토리에서 관리합니다.
-서비스 간 책임, API 계약, 이벤트 계약, 공통 identity header 계약은 contract 레포를 기준으로 합니다.
+## Canonical Set
 
-## 문서 가이드
+- [architecture.md](./architecture.md): 모듈/패키지 구조, 시스템 위치, Gateway 매핑
+- [api-spec.md](./api-spec.md): upstream API, contract source, shared header, versioning
+- [auth-flow.md](./auth-flow.md): login, refresh, logout, SSO, internal boundary, security 흐름
+- [data-model.md](./data-model.md): MySQL + Redis 상태 모델, key space, TTL, 인덱스
+- [deployment.md](./deployment.md): 실행, 설정, Docker, CI/CD, 관측 포인트
+- [testing.md](./testing.md): 테스트 전략, 실행 명령, 변경 체크리스트
+- [troubleshooting.md](./troubleshooting.md): 자주 막히는 문제와 점검 순서
+- [../CHANGELOG.md](../CHANGELOG.md): 변경 이력
 
-- [구조](./architecture.md): 모듈, 패키지, 의존 방향, 코드 배치 기준
-- [auth-service API](./api.md): Gateway public route와 auth-service upstream route 계약
-- [CI와 구현 기준](./ci-and-implementation.md): Gradle 멀티모듈, Java 17, CI, 로컬 구현 규칙
-- [DB](./database.md): 관리 테이블, UUID `CHAR(36)` 바인딩, 신규 DB baseline
-- [Docker](./docker.md): dev/prod Compose 구조, 네트워크, 실행 스크립트
-- [Platform 사용 기준](./platform.md): `platform-security`, `platform-governance`, `platform-integrations` 소비 방식
-- [문제 해결](./troubleshooting.md): 운영 판단 기준과 자주 막히는 문제
-- [OpenAPI](./openapi/auth-service.yml): auth-service HTTP API 명세
+## Spec Artifact
 
-- [계약 변경 절차](./contract-change-workflow.md): 구현 변경 후 service-contract, local OpenAPI, contract.lock.yml 갱신 순서
-
-## OpenAPI Sync
-
-`docs/openapi/auth-service.yml`은 service-contract의 upstream OpenAPI local copy입니다. 계약이 바뀌면 contract repo의 auth-service upstream OpenAPI를 먼저 갱신한 뒤, 이 파일을 같은 내용으로 맞춥니다.
+- [openapi/auth-service.yml](./openapi/auth-service.yml)

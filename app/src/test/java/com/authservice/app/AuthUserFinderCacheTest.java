@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.authservice.app.domain.auth.entity.Auth;
+import com.authservice.app.domain.auth.model.AuthAccountStatus;
 import com.authservice.app.domain.auth.model.AuthUser;
 import com.authservice.app.domain.auth.repository.AuthRepository;
 import com.authservice.app.domain.auth.service.AuthUserCacheStore;
@@ -61,7 +62,7 @@ class AuthUserFinderCacheTest {
 			.loginId("login-id")
 			.passwordHash("pw-hash")
 			.build();
-		UserAccountProfile profile = new UserAccountProfile(userId, "a@b.com", "name", "ADMIN", "A", null);
+		UserAccountProfile profile = new UserAccountProfile(userId, "a@b.com", "name", "ADMIN", AuthAccountStatus.ACTIVE.code(), null);
 
 		when(authUserCacheStore.get("login-id")).thenReturn(Optional.empty());
 		when(authRepository.findByLoginId("login-id")).thenReturn(Optional.of(auth));
@@ -83,7 +84,7 @@ class AuthUserFinderCacheTest {
 			.loginId("short-active")
 			.passwordHash("pw-hash")
 			.build();
-		UserAccountProfile profile = new UserAccountProfile(userId, "a@b.com", "name", "USER", "A", null);
+		UserAccountProfile profile = new UserAccountProfile(userId, "a@b.com", "name", "USER", AuthAccountStatus.ACTIVE.code(), null);
 
 		when(authUserCacheStore.get("short-active")).thenReturn(Optional.empty());
 		when(authRepository.findByLoginId("short-active")).thenReturn(Optional.of(auth));

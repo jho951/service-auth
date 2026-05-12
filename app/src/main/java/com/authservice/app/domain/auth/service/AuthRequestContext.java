@@ -1,5 +1,6 @@
 package com.authservice.app.domain.auth.service;
 
+import com.authservice.common.web.ClientIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 
 public final class AuthRequestContext {
@@ -16,8 +17,7 @@ public final class AuthRequestContext {
 		if (request == null) {
 			return new AuthRequestContext("", "");
 		}
-		String xff = request.getHeader("X-Forwarded-For");
-		String ip = (xff != null && !xff.isBlank()) ? xff.split(",")[0].trim() : request.getRemoteAddr();
+		String ip = ClientIpResolver.resolve(request);
 		String userAgent = request.getHeader("User-Agent");
 		return new AuthRequestContext(ip == null ? "" : ip, userAgent == null ? "" : userAgent);
 	}

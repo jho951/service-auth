@@ -23,7 +23,7 @@ public final class GlobalResponse<T> {
 	private final T data;
 
 	public GlobalResponse(int httpStatus, boolean success, String message, int code, T data) {
-		if (message == null) throw new IllegalArgumentException("메시지는 null일 수 없습니다.");
+		if (message == null) throw new IllegalArgumentException("응답 메시지는 null일 수 없습니다.");
 		this.httpStatus = httpStatus;
 		this.success = success;
 		this.message = message;
@@ -32,7 +32,8 @@ public final class GlobalResponse<T> {
 	}
 
 	public static <T> GlobalResponse<T> ok(SuccessCode successCode, T data) {
-		if (successCode == null || data == null) throw new IllegalArgumentException("HTTP 상태와 메시지는 null일 수 없습니다.");
+		if (successCode == null) throw new IllegalArgumentException("성공 코드는 null일 수 없습니다.");
+		if (data == null) throw new IllegalArgumentException("응답 데이터는 null일 수 없습니다.");
 		return new GlobalResponse<>(
 			successCode.getHttpStatus(),
 			true,
@@ -43,7 +44,7 @@ public final class GlobalResponse<T> {
 	}
 
 	public static GlobalResponse<Void> ok(SuccessCode successCode) {
-		if (successCode == null) throw new IllegalArgumentException("HTTP 상태와 메시지는 null일 수 없습니다.");
+		if (successCode == null) throw new IllegalArgumentException("성공 여부는 null일 수 없습니다.");
 		return new GlobalResponse<>(
 			successCode.getHttpStatus(),
 			true,
@@ -54,7 +55,7 @@ public final class GlobalResponse<T> {
 	}
 
 	public static GlobalResponse<Void> fail(ErrorCode errorCode) {
-		if (errorCode == null) throw new IllegalArgumentException("HTTP 상태와 메시지는 null일 수 없습니다.");
+		if (errorCode == null) throw new IllegalArgumentException("실패 여부는 null일 수 없습니다.");
 		return new GlobalResponse<>(
 			errorCode.getHttpStatus(),
 			false,

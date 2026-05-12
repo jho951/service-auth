@@ -13,11 +13,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class SsoOAuth2FailureHandler implements AuthenticationFailureHandler {
 
-	private final SsoAuthService ssoAuthService;
+	private final SsoOAuthFlowService ssoOAuthFlowService;
 	private final SsoCookieService ssoCookieService;
 
-	public SsoOAuth2FailureHandler(SsoAuthService ssoAuthService, SsoCookieService ssoCookieService) {
-		this.ssoAuthService = ssoAuthService;
+	public SsoOAuth2FailureHandler(SsoOAuthFlowService ssoOAuthFlowService, SsoCookieService ssoCookieService) {
+		this.ssoOAuthFlowService = ssoOAuthFlowService;
 		this.ssoCookieService = ssoCookieService;
 	}
 
@@ -27,7 +27,7 @@ public class SsoOAuth2FailureHandler implements AuthenticationFailureHandler {
 		HttpServletResponse response,
 		AuthenticationException exception
 	) throws IOException, ServletException {
-		URI redirectUri = ssoAuthService.resolveOAuthFailureRedirect(request);
+		URI redirectUri = ssoOAuthFlowService.resolveOAuthFailureRedirect(request);
 		response.addHeader("Set-Cookie", ssoCookieService.clearOAuthStateCookie());
 
 		if (redirectUri == null) {

@@ -34,6 +34,8 @@ env:
   CD_PROFILE: ec2-compose
   COMPOSE_VALIDATE_SCRIPT: ./scripts/validate-compose.sh
   DEPLOY_WRAPPER_SCRIPT: ./scripts/deploy-stack-service.sh
+  SYNC_EC2_ENV_TEMPLATE_SCRIPT: ./scripts/sync-ec2-env-template.sh
+  SYNC_EC2_SCHEMA_SCRIPT: ./scripts/sync-ec2-schema.sh
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
   HEALTH_URL: ${{ vars.HEALTH_URL || '' }}
   READY_URL: ${{ vars.READY_URL || '' }}
@@ -173,7 +175,13 @@ jobs:
           bash ./scripts/fetch-contract.sh
 
       - name: Ensure wrappers are executable
-        run: chmod +x "${COMPOSE_VALIDATE_SCRIPT}" "${DEPLOY_WRAPPER_SCRIPT}"
+        run: chmod +x "${COMPOSE_VALIDATE_SCRIPT}" "${DEPLOY_WRAPPER_SCRIPT}" "${SYNC_EC2_ENV_TEMPLATE_SCRIPT}" "${SYNC_EC2_SCHEMA_SCRIPT}"
+
+      - name: Sync EC2 bundle env template
+        run: bash "${SYNC_EC2_ENV_TEMPLATE_SCRIPT}"
+
+      - name: Sync EC2 bundle schema
+        run: bash "${SYNC_EC2_SCHEMA_SCRIPT}"
 
       - name: Validate dev compose
         run: ${{ env.COMPOSE_VALIDATE_SCRIPT }} dev

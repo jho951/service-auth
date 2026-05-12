@@ -5,7 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
-import org.springframework.data.redis.core.RedisTemplate;
+import com.authservice.common.redis.support.RedisTypedStore;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,10 +14,10 @@ public class AuthRedisRefreshTokenStore {
 	private static final String JTI_PREFIX = "refresh:jti:";
 	private static final String USER_PREFIX = "refresh:user:";
 
-	private final RedisTemplate<String, Object> redisTemplate;
+	private final RedisTypedStore redisTypedStore;
 
-	public AuthRedisRefreshTokenStore(RedisTemplate<String, Object> redisTemplate) {
-		this.redisTemplate = redisTemplate;
+	public AuthRedisRefreshTokenStore(RedisTypedStore redisTypedStore) {
+		this.redisTypedStore = redisTypedStore;
 	}
 
 	public void save(String userId, String refreshToken, Instant expiresAt) {
@@ -28,21 +28,20 @@ public class AuthRedisRefreshTokenStore {
 			deleteKey(tokenKey);
 			deleteKey(userKey);
 			return;
-		}
-		try {
-			RefreshTokenMetadata metadata = new RefreshTokenMetadata(userId, hash(refreshToken), expiresAt.toString());
-			redisTemplate.opsForValue().set(tokenKey, metadata, ttl);
-			redisTemplate.opsForValue().set(userKey, tokenKey, ttl);
-		} catch (RuntimeException ex) {
-			// keep auth flow available when Redis is unavailable
-		}
+			}
+			try {
+				RefreshTokenMetadata metadata = new RefreshTokenMetadata(userId, hash(refreshToken), expiresAt.toString());
+				redisTypedStore.save(tokenKey, metadata, ttl);
+				redisTypedStore.save(userKey, tokenKey, ttl);
+			} catch (RuntimeException ex) {
+				// keep auth flow available when Redis is unavailable
+			}
 	}
 
 	public boolean exists(String userId, String refreshToken) {
 		String key = tokenKey(refreshToken);
 		try {
-			Boolean exists = redisTemplate.hasKey(key);
-			return Boolean.TRUE.equals(exists);
+			return redisTypedStore.hasKey(key);
 		} catch (RuntimeException ex) {
 			return false;
 		}
@@ -77,7 +76,7 @@ public class AuthRedisRefreshTokenStore {
 
 	private void deleteKey(String key) {
 		try {
-			redisTemplate.delete(key);
+			redisTypedStore.delete(key);
 		} catch (RuntimeException ex) {
 			// keep auth flow available when Redis is unavailable
 		}

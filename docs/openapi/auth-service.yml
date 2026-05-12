@@ -268,7 +268,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /auth/internal/session/validate:
+  /internal/auth/session/validate:
     post:
       tags: [Internal]
       summary: 현재 auth session 검증

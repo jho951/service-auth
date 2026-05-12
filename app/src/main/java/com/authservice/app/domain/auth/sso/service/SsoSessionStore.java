@@ -3,12 +3,12 @@ package com.authservice.app.domain.auth.sso.service;
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoSessionPayload;
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoStatePayload;
 import com.authservice.app.domain.auth.sso.model.SsoStorePayloads.SsoTicketPayload;
+import com.authservice.common.redis.support.RedisTypedStore;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,10 +21,10 @@ public class SsoSessionStore {
 	private static final String SESSION_PREFIX = "auth:session:";
 	private static final String LEGACY_SESSION_PREFIX = "sso:session:";
 
-	private final RedisTemplate<String, Object> redisTemplate;
+	private final RedisTypedStore redisTypedStore;
 
-	public SsoSessionStore(RedisTemplate<String, Object> redisTemplate) {
-		this.redisTemplate = redisTemplate;
+	public SsoSessionStore(RedisTypedStore redisTypedStore) {
+		this.redisTypedStore = redisTypedStore;
 	}
 
 	public void saveState(String state, SsoStatePayload payload, Instant expiresAt) {
@@ -63,7 +63,7 @@ public class SsoSessionStore {
 			return;
 		}
 		try {
-			redisTemplate.opsForValue().set(key, payload, ttl);
+			redisTypedStore.save(key, payload, ttl);
 		} catch (RuntimeException ex) {
 			log.warn("Redis write failed for key={}. Ignoring write and continuing.", key, ex);
 		}
@@ -89,11 +89,7 @@ public class SsoSessionStore {
 
 	private <T> Optional<T> find(String key, Class<T> type) {
 		try {
-			Object value = redisTemplate.opsForValue().get(key);
-			if (type.isInstance(value)) {
-				return Optional.of(type.cast(value));
-			}
-			return Optional.empty();
+			return redisTypedStore.find(key, type);
 		} catch (RuntimeException ex) {
 			log.warn("Redis read failed for key={}. Returning cache miss.", key, ex);
 			return Optional.empty();
@@ -102,7 +98,7 @@ public class SsoSessionStore {
 
 	private void delete(String key) {
 		try {
-			redisTemplate.delete(key);
+			redisTypedStore.delete(key);
 		} catch (RuntimeException ex) {
 			log.warn("Redis delete failed for key={}. Ignoring delete and continuing.", key, ex);
 		}

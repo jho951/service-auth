@@ -1,4 +1,2 @@
-/**
- * Shared logging constants and masking utilities.
- */
+/** Shared logging constants and masking utilities. */
 package com.authservice.common.logging;

@@ -1,6 +1,15 @@
 # auth-service Terraform
 
-This stack follows the MSA Terraform contract and provisions the auth-service ECS/Fargate Blue/Green baseline.
+This stack is an optional or future infrastructure path for `auth-service`.
+It is not the current default CD path of this repository.
+
+Current default release path:
+
+- image build and push to ECR
+- `ec2-compose` deployment profile
+- remote deploy via EC2 bundle wrapper
+
+This Terraform stack follows the MSA Terraform contract and provisions the auth-service ECS/Fargate Blue/Green baseline.
 
 It creates:
 
@@ -98,7 +107,8 @@ Rollback is handled by CodeDeploy auto rollback on deployment failure or stopped
 
 ## GitHub Actions CD
 
-`.github/workflows/cd.yml` builds the service image, pushes it to Amazon ECR, registers a new ECS task definition revision, and creates a CodeDeploy ECS deployment.
+If this Terraform path is adopted, GitHub Actions CD must be aligned separately.
+The current repository `cd.yml` does not use this Terraform flow as its default release mechanism.
 
 Required GitHub secret:
 

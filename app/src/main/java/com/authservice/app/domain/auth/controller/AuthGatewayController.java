@@ -3,18 +3,18 @@ package com.authservice.app.domain.auth.controller;
 import com.authservice.common.logging.SensitiveDataMasker;
 import com.authservice.app.domain.auth.dto.AuthRequest;
 import com.authservice.app.domain.auth.dto.AuthResponse;
+import com.authservice.app.domain.auth.model.AuthFailureReason;
 import com.authservice.app.domain.audit.service.AuthAuditLogService;
+import com.authservice.app.domain.auth.model.AuthLoginResult;
 import com.authservice.app.domain.auth.service.AuthAccountPolicyService;
 import com.authservice.app.domain.auth.service.AuthLoginAttemptService;
 import com.authservice.app.domain.auth.model.AuthTokens;
 import com.authservice.app.domain.auth.service.AuthLoginService;
 import com.authservice.app.domain.auth.service.AuthRequestContext;
-import com.authservice.app.domain.auth.sso.service.SsoCookieService;
-import com.authservice.app.domain.auth.support.RefreshCookieWriter;
+import com.authservice.app.domain.auth.support.AuthCookieResponseWriter;
 import com.authservice.app.domain.auth.support.RefreshTokenExtractor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,10 +35,9 @@ public class AuthGatewayController {
 
 	private final AuthLoginService authService;
 	private final RefreshTokenExtractor refreshTokenExtractor;
-	private final RefreshCookieWriter refreshCookieWriter;
+	private final AuthCookieResponseWriter authCookieResponseWriter;
 	private final AuthAccountPolicyService authAccountPolicyService;
 	private final AuthLoginAttemptService authLoginAttemptService;
-	private final SsoCookieService ssoCookieService;
 	private final AuthAuditLogService authAuditLogService;
 
 	/**
@@ -52,18 +51,16 @@ public class AuthGatewayController {
 	public AuthGatewayController(
 		AuthLoginService authService,
 		RefreshTokenExtractor refreshTokenExtractor,
-		RefreshCookieWriter refreshCookieWriter,
+		AuthCookieResponseWriter authCookieResponseWriter,
 		AuthAccountPolicyService authAccountPolicyService,
 		AuthLoginAttemptService authLoginAttemptService,
-		SsoCookieService ssoCookieService,
 		AuthAuditLogService authAuditLogService
 	) {
 		this.authService = authService;
 		this.refreshTokenExtractor = refreshTokenExtractor;
-		this.refreshCookieWriter = refreshCookieWriter;
+		this.authCookieResponseWriter = authCookieResponseWriter;
 		this.authAccountPolicyService = authAccountPolicyService;
 		this.authLoginAttemptService = authLoginAttemptService;
-		this.ssoCookieService = ssoCookieService;
 		this.authAuditLogService = authAuditLogService;
 	}
 
@@ -80,26 +77,22 @@ public class AuthGatewayController {
 		try {
 			AuthTokens tokens = authService.login(req.getUsername(), req.getPassword());
 			authAccountPolicyService.markLoginSuccess(req.getUsername());
-			authLoginAttemptService.record(req.getUsername(), context, "SUCCESS");
+			authLoginAttemptService.record(req.getUsername(), context, AuthLoginResult.SUCCESS);
 			authAuditLogService.logPasswordLoginSuccess(req.getUsername());
 
-			ResponseEntity<Void> response = refreshCookieWriter.write(
+			return authCookieResponseWriter.writeTokenCookies(
 				tokens,
-				ResponseEntity.ok().build()
+				ResponseEntity.ok(new AuthResponse.TokenResponse(tokens.accessToken(), tokens.refreshToken()))
 			);
-			return ResponseEntity.status(response.getStatusCode())
-				.headers(response.getHeaders())
-				.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.accessToken()))
-				.body(new AuthResponse.TokenResponse(tokens.accessToken(), tokens.refreshToken()));
 		} catch (RuntimeException ex) {
 			authAccountPolicyService.markLoginFailure(req.getUsername());
-			authLoginAttemptService.record(req.getUsername(), context, "FAILURE");
+			authLoginAttemptService.record(req.getUsername(), context, AuthLoginResult.FAILURE);
 			log.warn("event=auth_login_request_failed username={} ip={} user_agent={} exception_type={}",
 				SensitiveDataMasker.maskIdentifier(req.getUsername()),
 				context.ip(),
 				context.userAgent(),
 				ex.getClass().getSimpleName());
-			authAuditLogService.logPasswordLoginFailure(req.getUsername(), "INVALID_CREDENTIALS_OR_POLICY");
+			authAuditLogService.logPasswordLoginFailure(req.getUsername(), AuthFailureReason.INVALID_CREDENTIALS_OR_POLICY);
 			throw ex;
 		}
 	}
@@ -115,13 +108,9 @@ public class AuthGatewayController {
 		String refreshToken = refreshTokenExtractor.extract(request);
 		AuthTokens tokens = authService.refresh(refreshToken);
 
-		ResponseEntity<Void> response = refreshCookieWriter.write(
+		return authCookieResponseWriter.writeTokenCookies(
 			tokens,
-			ResponseEntity.ok().build()
+			ResponseEntity.ok(new AuthResponse.TokenResponse(tokens.accessToken(), tokens.refreshToken()))
 		);
-		return ResponseEntity.status(response.getStatusCode())
-			.headers(response.getHeaders())
-			.header(HttpHeaders.SET_COOKIE, ssoCookieService.buildAccessTokenCookie(tokens.accessToken()))
-			.body(new AuthResponse.TokenResponse(tokens.accessToken(), tokens.refreshToken()));
 	}
 }

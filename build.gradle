@@ -1,11 +1,14 @@
 plugins {
     id 'base'
+    alias(libs.plugins.spring.dependency.management) apply false
 }
 
 allprojects {
     group = providers.gradleProperty('project_group').get()
     version = providers.gradleProperty('project_version').get()
 }
+
+def sharedSpringModules = [project(':app'), project(':common')]
 
 subprojects {
     apply plugin: 'java'
@@ -23,15 +26,40 @@ subprojects {
     }
 
     dependencies {
+        compileOnly libs.lombok
+        annotationProcessor libs.lombok
+        testCompileOnly libs.lombok
+        testAnnotationProcessor libs.lombok
         testRuntimeOnly libs.junit.platform.launcher
     }
 
     tasks.withType(JavaCompile).configureEach {
+        options.encoding = providers.gradleProperty('project_encoding').get()
         options.compilerArgs += ['-Xlint:unchecked']
     }
 
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
         jvmArgs '-Xshare:off'
+    }
+}
+
+configure(sharedSpringModules) {
+    apply plugin: 'io.spring.dependency-management'
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"
+        }
+    }
+
+    dependencies {
+        implementation libs.jackson.databind
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-security'
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
     }
 }

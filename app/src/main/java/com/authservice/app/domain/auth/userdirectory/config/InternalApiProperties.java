@@ -22,9 +22,20 @@ public class InternalApiProperties {
 		throw new GlobalException(ErrorCode.UNAUTHORIZED);
 	}
 
+	public void validateInternalToken(String token) {
+		if (isValidInternalToken(token)) {
+			return;
+		}
+		throw new GlobalException(ErrorCode.UNAUTHORIZED);
+	}
+
 	private boolean isValidAuthorizationHeader(String authorization) {
 		String expected = "Bearer " + key;
 		return key != null && !key.isBlank() && expected.equals(authorization);
+	}
+
+	private boolean isValidInternalToken(String token) {
+		return key != null && !key.isBlank() && key.equals(token);
 	}
 
 	private boolean isValidInternalSecret(String internalRequestSecret) {

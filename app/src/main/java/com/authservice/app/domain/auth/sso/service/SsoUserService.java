@@ -2,6 +2,7 @@ package com.authservice.app.domain.auth.sso.service;
 
 import com.authservice.app.domain.auth.sso.model.GithubUserProfile;
 import com.authservice.app.domain.auth.sso.model.SsoPrincipal;
+import com.authservice.app.domain.auth.model.OAuthProvider;
 import com.authservice.app.domain.auth.userdirectory.model.OAuth2ProvisionCommand;
 import com.authservice.app.domain.auth.userdirectory.model.UserAccountProfile;
 import com.authservice.app.domain.auth.userdirectory.service.UserDirectory;
@@ -23,7 +24,7 @@ public class SsoUserService {
 
 	private SsoPrincipal verifyGithubProfile(GithubUserProfile profile) {
 		UserAccountProfile user = userDirectory.provisionOAuth2User(new OAuth2ProvisionCommand(
-			"github",
+			OAuthProvider.GITHUB,
 			profile.getProviderId(),
 			profile.getEmail(),
 			profile.getName(),

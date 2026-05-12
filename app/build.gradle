@@ -1,41 +1,31 @@
 plugins {
     alias(libs.plugins.spring.boot)
-    alias(libs.plugins.spring.dependency.management)
 }
 
 dependencies {
     implementation project(':common')
 
-    compileOnly libs.lombok
-    annotationProcessor libs.lombok
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    runtimeOnly libs.h2
 
-    implementation libs.lettuce.core
-    implementation libs.mysql.connector
-    implementation libs.jackson.databind
-    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-logging'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation libs.springdoc.openapi
     implementation platform(libs.platform.runtime.bom)
     implementation platform(libs.platform.governance.bom)
-    implementation libs.platform.governance.starter
     implementation platform(libs.platform.security.bom)
+    implementation libs.platform.governance.starter
+    implementation libs.platform.governance.adapter.auditlog
+    implementation libs.platform.governance.adapter.policyconfig
     implementation libs.platform.security.starter
+    implementation libs.platform.security.adapter.auth
     implementation libs.platform.security.governance.bridge
     implementation "io.jsonwebtoken:jjwt-api:${jjwt_version}"
+
+    runtimeOnly libs.mysql.connector
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwt_version}"
     runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwt_version}"
 
-    testImplementation libs.junit.jupiter
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly libs.h2
 }

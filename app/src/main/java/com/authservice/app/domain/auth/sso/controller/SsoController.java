@@ -3,7 +3,11 @@ package com.authservice.app.domain.auth.sso.controller;
 import com.authservice.app.domain.auth.sso.dto.SsoRequest;
 import com.authservice.app.domain.auth.sso.dto.SsoResponse;
 import com.authservice.app.domain.auth.sso.model.SsoPrincipal;
-import com.authservice.app.domain.auth.sso.service.SsoAuthService;
+import com.authservice.app.domain.auth.sso.service.SsoCurrentUserQueryService;
+import com.authservice.app.domain.auth.sso.service.SsoInternalSessionValidationService;
+import com.authservice.app.domain.auth.sso.service.SsoLogoutService;
+import com.authservice.app.domain.auth.sso.service.SsoOAuthFlowService;
+import com.authservice.app.domain.auth.sso.service.SsoTicketExchangeService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -19,37 +23,33 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequestMapping("/auth")
 public class SsoController {
 
-	private final SsoAuthService ssoAuthService;
+	private final SsoOAuthFlowService ssoOAuthFlowService;
+	private final SsoTicketExchangeService ssoTicketExchangeService;
+	private final SsoInternalSessionValidationService ssoInternalSessionValidationService;
+	private final SsoCurrentUserQueryService ssoCurrentUserQueryService;
+	private final SsoLogoutService ssoLogoutService;
 
-	public SsoController(SsoAuthService ssoAuthService) {
-		this.ssoAuthService = ssoAuthService;
+	public SsoController(
+		SsoOAuthFlowService ssoOAuthFlowService,
+		SsoTicketExchangeService ssoTicketExchangeService,
+		SsoInternalSessionValidationService ssoInternalSessionValidationService,
+		SsoCurrentUserQueryService ssoCurrentUserQueryService,
+		SsoLogoutService ssoLogoutService
+	) {
+		this.ssoOAuthFlowService = ssoOAuthFlowService;
+		this.ssoTicketExchangeService = ssoTicketExchangeService;
+		this.ssoInternalSessionValidationService = ssoInternalSessionValidationService;
+		this.ssoCurrentUserQueryService = ssoCurrentUserQueryService;
+		this.ssoLogoutService = ssoLogoutService;
 	}
 
-	@GetMapping("/sso/start")
-	public ResponseEntity<Void> start(
+	@GetMapping({"/sso/start", "/login/github", "/oauth2/authorize/github"})
+	public ResponseEntity<Void> startGithubLogin(
 		@RequestParam(name = "page", required = false) String page,
 		@RequestParam(name = "redirect_uri", required = false) String redirectUri,
 		HttpServletRequest request
 	) {
-		return ssoAuthService.startGithubLogin(page, redirectUri, request);
-	}
-
-	@GetMapping("/login/github")
-	public ResponseEntity<Void> loginGithub(
-		@RequestParam(name = "page", required = false) String page,
-		@RequestParam(name = "redirect_uri", required = false) String redirectUri,
-		HttpServletRequest request
-	) {
-		return ssoAuthService.startGithubLogin(page, redirectUri, request);
-	}
-
-	@GetMapping("/oauth2/authorize/github")
-	public ResponseEntity<Void> authorizeGithub(
-		@RequestParam(name = "page", required = false) String page,
-		@RequestParam(name = "redirect_uri", required = false) String redirectUri,
-		HttpServletRequest request
-	) {
-		return ssoAuthService.startGithubLogin(page, redirectUri, request);
+		return ssoOAuthFlowService.startGithubLogin(page, redirectUri, request);
 	}
 
 	@GetMapping("/oauth/github/callback")
@@ -64,17 +64,12 @@ public class SsoController {
 
 	@PostMapping("/exchange")
 	public ResponseEntity<Void> exchange(@Valid @RequestBody SsoRequest.ExchangeRequest request, HttpServletRequest servletRequest) {
-		return ssoAuthService.exchangeTicket(request.getTicket(), servletRequest);
-	}
-
-	@PostMapping("/internal/session/validate")
-	public ResponseEntity<SsoResponse.InternalSessionValidationResponse> validateSession(HttpServletRequest request) {
-		return ssoAuthService.validateInternalSession(request);
+		return ssoTicketExchangeService.exchangeTicket(request.getTicket(), servletRequest);
 	}
 
 	@GetMapping("/session")
 	public ResponseEntity<SsoResponse.InternalSessionValidationResponse> session(HttpServletRequest request) {
-		return ssoAuthService.validateInternalSession(request);
+		return ssoInternalSessionValidationService.validate(request);
 	}
 
 	@GetMapping("/me")
@@ -82,7 +77,7 @@ public class SsoController {
 		HttpServletRequest request,
 		@RequestParam(name = "page", required = false) String page
 	) {
-		SsoPrincipal principal = ssoAuthService.getCurrentUser(request, page);
+		SsoPrincipal principal = ssoCurrentUserQueryService.getCurrentUser(request, page);
 		return new SsoResponse.MeResponse(
 			principal.getUserId(),
 			principal.getEmail(),
@@ -95,6 +90,6 @@ public class SsoController {
 
 	@PostMapping("/logout")
 	public ResponseEntity<Void> logout(HttpServletRequest request) {
-		return ssoAuthService.logout(request);
+		return ssoLogoutService.logout(request);
 	}
 }

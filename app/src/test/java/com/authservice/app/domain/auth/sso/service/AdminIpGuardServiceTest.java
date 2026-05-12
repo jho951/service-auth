@@ -20,7 +20,7 @@ class AdminIpGuardServiceTest {
 		properties.getFrontend().getAdmin().getIpGuard().setEnabled(true);
 		properties.getFrontend().getAdmin().getIpGuard().setDefaultAllow(false);
 		properties.getFrontend().getAdmin().getIpGuard().setRules("127.0.0.1");
-		AdminIpGuardService service = new AdminIpGuardService(properties);
+		AdminIpGuardService service = new AdminIpGuardService(properties, new AdminIpRuleProvider());
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		when(request.getRemoteAddr()).thenReturn("203.0.113.10");
 
@@ -38,7 +38,7 @@ class AdminIpGuardServiceTest {
 		properties.getFrontend().getAdmin().getIpGuard().setDefaultAllow(false);
 		properties.getFrontend().getAdmin().getIpGuard().setRules("203.0.113.10");
 		properties.getFrontend().getAdmin().getIpGuard().setRulesFile(rulesFile.toString());
-		AdminIpGuardService service = new AdminIpGuardService(properties);
+		AdminIpGuardService service = new AdminIpGuardService(properties, new AdminIpRuleProvider());
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		when(request.getRemoteAddr()).thenReturn("203.0.113.10");
 
@@ -55,7 +55,7 @@ class AdminIpGuardServiceTest {
 		properties.getFrontend().getAdmin().getIpGuard().setEnabled(true);
 		properties.getFrontend().getAdmin().getIpGuard().setDefaultAllow(false);
 		properties.getFrontend().getAdmin().getIpGuard().setRulesFile(rulesFile.toString());
-		AdminIpGuardService service = new AdminIpGuardService(properties);
+		AdminIpGuardService service = new AdminIpGuardService(properties, new AdminIpRuleProvider());
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		when(request.getRemoteAddr()).thenReturn("203.0.113.10");
 
@@ -73,7 +73,7 @@ class AdminIpGuardServiceTest {
 		properties.getFrontend().getAdmin().getIpGuard().setEnabled(true);
 		properties.getFrontend().getAdmin().getIpGuard().setDefaultAllow(true);
 		properties.getFrontend().getAdmin().getIpGuard().setRulesFile("/path/does/not/exist/ip-allow.txt");
-		AdminIpGuardService service = new AdminIpGuardService(properties);
+		AdminIpGuardService service = new AdminIpGuardService(properties, new AdminIpRuleProvider());
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		when(request.getRemoteAddr()).thenReturn("203.0.113.10");
 

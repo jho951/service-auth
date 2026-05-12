@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.jho951.platform.security.api.SecurityAuditPublisher;
 import io.github.jho951.platform.security.api.SecurityContextResolver;
+import io.github.jho951.platform.security.auth.PlatformSessionSupport;
+import io.github.jho951.platform.security.auth.TokenIssuanceCapability;
 import io.github.jho951.platform.security.policy.PlatformSecurityProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +27,19 @@ class AuthServiceApplicationTests {
 	@Autowired
 	private PlatformSecurityProperties platformSecurityProperties;
 
+	@Autowired
+	private TokenIssuanceCapability tokenIssuanceCapability;
+
+	@Autowired
+	private PlatformSessionSupport platformSessionSupport;
+
 	@Test
 	void wiresPlatformSecurityStarterBeans() {
 		assertThat(securityAuditPublisher.getClass().getName())
 			.isEqualTo("io.github.jho951.platform.security.governance.GovernanceSecurityAuditPublisher");
 		assertThat(securityContextResolver).isNotNull();
+		assertThat(tokenIssuanceCapability).isNotNull();
+		assertThat(platformSessionSupport).isNotNull();
 	}
 
 	@Test
