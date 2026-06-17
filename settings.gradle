@@ -7,18 +7,29 @@ dependencyResolutionManagement {
                 .orElse(providers.gradleProperty('githubUsername'))
                 .orElse(providers.environmentVariable('GITHUB_ACTOR'))
                 .orElse('jho951')
-        def githubPackagesToken = providers.gradleProperty('gh_token')
+        def githubPackagesToken = providers.gradleProperty('githubPackagesToken')
+                .orElse(providers.gradleProperty('githubToken'))
+                .orElse(providers.gradleProperty('ghToken'))
+                .orElse(providers.gradleProperty('gh_token'))
+                .orElse(providers.environmentVariable('GH_PACKAGES_TOKEN'))
                 .orElse(providers.environmentVariable('GH_TOKEN'))
+                .orElse(providers.environmentVariable('GITHUB_TOKEN'))
+        def platformPackagesUrl = providers.gradleProperty('platformPackagesUrl')
+                .orElse(providers.environmentVariable('PLATFORM_PACKAGES_URL'))
+                .orElse('https://maven.pkg.github.com/jho951/platform-packages')
 
-        ['platform-governance', 'platform-security', 'platform-integrations'].each { repoName ->
-            maven {
-                url = uri("https://maven.pkg.github.com/jho951/${repoName}")
-                if (githubPackagesUsername.present && githubPackagesToken.present) {
-                    credentials {
-                        username = githubPackagesUsername.get()
-                        password = githubPackagesToken.get()
-                    }
+        maven {
+            name = 'GitHubPlatformPackages'
+            url = uri(platformPackagesUrl.get())
+            if (githubPackagesUsername.present && githubPackagesToken.present) {
+                credentials {
+                    username = githubPackagesUsername.get()
+                    password = githubPackagesToken.get()
                 }
+            }
+            metadataSources {
+                mavenPom()
+                artifact()
             }
         }
     }
